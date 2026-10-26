@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Healthy Check",
+    "slug": "healthy-check-g7",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icons/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0EA5E9"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.healthycheck.g7",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Ứng dụng cần đọc dữ liệu sức khỏe để theo dõi bước chân, giấc ngủ và dinh dưỡng.",
+        "NSHealthUpdateUsageDescription": "Ứng dụng cần ghi dữ liệu sức khỏe để cập nhật tiến bộ cá nhân."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "backgroundColor": "#0EA5E9"
+      },
+      "package": "com.healthycheck.g7",
+      "permissions": [
+        "ACTIVITY_RECOGNITION",
+        "BODY_SENSORS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/icons/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-constants",
+      [
+        "expo-auth-session",
+        {
+          "useProxy": false
+        }
+      ]
+    ]
+  }
+}
