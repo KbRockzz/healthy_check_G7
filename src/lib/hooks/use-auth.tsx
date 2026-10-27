@@ -38,8 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -89,24 +89,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(data);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   }
 
   async function signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && data.user) {
-      await fetchProfile(data.user.id);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error && data.user) {
+        await fetchProfile(data.user.id);
+      }
+      return { error };
+    } catch (err: any) {
+      console.error('Lỗi signin:', err);
+      return { error: err };
     }
-    return { error };
   }
 
   async function signUp(email: string, password: string, fullName: string) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    return { error };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      });
+      return { error };
+    } catch (err: any) {
+      console.error('Lỗi signup:', err);
+      return { error: err };
+    }
   }
 
   async function signOut() {

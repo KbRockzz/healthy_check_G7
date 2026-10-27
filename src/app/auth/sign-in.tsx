@@ -29,8 +29,10 @@ export default function SignInScreen() {
     setBusy(false);
     if (error) {
       Alert.alert('Đăng nhập thất bại', error.message || 'Email hoặc mật khẩu không chính xác.');
+    } else {
+      // Đăng nhập thành công - chuyển đến dashboard
+      router.replace('/dashboard');
     }
-    // AuthProvider sẽ cập nhật session, router effect trong dashboard sẽ redirect
   };
 
   return (
