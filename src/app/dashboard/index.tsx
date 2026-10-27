@@ -1,341 +1,280 @@
+/**
+ * Màn hình chính của ứng dụng — Dashboard điều hướng
+ * Hiển thị lưới các chức năng chính sau khi đăng nhập
+ */
 import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Image,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS } from '@/theme';
-import { supabase, DashboardSummary } from '@/lib/supabase';
-import HealthScoreCard from '@/components/health-score-card';
-import MetricWidget from '@/components/metric-widget';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { useAuth } from '@/lib/hooks/use-auth';
+import { supabase } from '@/lib/supabase';
 import BottomTabBar from '@/components/bottom-tab-bar';
 
-/**
- * Màn hình Bảng tin tổng quan sức khỏe (Home - Dashboard / Overview) — Mockup #4
- *
- * Màn hình 3/10: Điểm sức khỏe + 4 widget tóm tắt (Steps, Sleep, Nutrition, Cycle)
- * + Báo cáo tuần + Bài viết blogs nổi bật.
- */
-export default function DashboardScreen() {
+interface FeatureItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  color: string;
+  route: string;
+  gradient?: [string, string];
+}
+
+const FEATURES: FeatureItem[] = [
+  {
+    id: 'steps',
+    title: 'Steps',
+    subtitle: 'Track your daily walks',
+    icon: 'walk',
+    color: COLORS.primary,
+    route: '/dashboard/steps',
+  },
+  {
+    id: 'sleep',
+    title: 'Sleep',
+    subtitle: 'Monitor your rest quality',
+    icon: 'moon',
+    color: '#8B5CF6',
+    route: '/dashboard/sleep',
+  },
+  {
+    id: 'nutrition',
+    title: 'Nutrition',
+    subtitle: 'Log meals & calories',
+    icon: 'restaurant',
+    color: COLORS.warning,
+    route: '/dashboard/nutrition',
+  },
+  {
+    id: 'cycle',
+    title: 'Cycle',
+    subtitle: 'Track your period',
+    icon: 'calendar',
+    color: COLORS.accent,
+    route: '/dashboard/cycle',
+  },
+  {
+    id: 'health-data',
+    title: 'Health Data',
+    subtitle: 'All metrics overview',
+    icon: 'analytics',
+    color: '#3B82F6',
+    route: '/health-data',
+  },
+  {
+    id: 'profile',
+    title: 'Profile',
+    subtitle: 'Settings & preferences',
+    icon: 'person',
+    color: '#6366F1',
+    route: '/profile',
+  },
+];
+
+export default function HomeScreen() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [userName, setUserName] = useState('User');
-
-  const fetchDashboardData = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // Chưa đăng nhập -> quay về trang Sign In hoặc demo owner từ migration 0005
-        router.replace('/auth/sign-in');
-        return;
-      }
-
-      setUserName(session.user.user_metadata?.full_name || 'Nguyễn Minh Anh');
-
-      // Gọi RPC get_dashboard_summary đã thiết kế ở Migration 0003
-      const { data, error } = await supabase.rpc('get_dashboard_summary', {
-        p_user: session.user.id,
-        p_day: new Date().toISOString().split('T')[0],
-      });
-
-      if (error) {
-        console.warn('Lỗi gọi get_dashboard_summary RPC:', error.message);
-        return;
-      }
-
-      if (data) {
-        setSummary(data as DashboardSummary);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const { session, profile, signOut, loading: authLoading } = useAuth();
+  const [todaySteps, setTodaySteps] = useState<number | null>(null);
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (!session) {
+      router.replace('/auth/sign-in');
+      return;
+    }
+    const name = session.user.user_metadata?.full_name || profile?.full_name || 'User';
+    setUserName(name.split(' ')[0]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchDashboardData();
+    // Fetch today's steps
+    const fetchSteps = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('step_records')
+        .select('steps')
+        .eq('user_id', session.user.id)
+        .eq('recorded_on', today)
+        .single();
+      if (data) setTodaySteps(data.steps);
+    };
+    fetchSteps();
+  }, [session]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace('/launch');
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
-      <View style={styles.loaderContainer}>
+      <View style={styles.loader}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
+  if (!session) {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
-      {/* Nội dung cuộn */}
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
-        }
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header: Lời chào + Avatar */}
+        {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.dateText}>TUES, 11 JUL</Text>
-            <Text style={styles.welcomeText}>Overview</Text>
+            <Text style={styles.greeting}>Good morning,</Text>
+            <Text style={styles.name}>{userName} 👋</Text>
           </View>
-          <TouchableOpacity onPress={() => router.push('/profile')}>
-            <View style={styles.avatarContainer}>
-              <Ionicons name="person" size={20} color={COLORS.primary} />
-            </View>
+          <TouchableOpacity onPress={() => router.push('/profile')} style={styles.avatar}>
+            {profile?.avatar_url ? (
+              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person" size={24} color={COLORS.primary} />
+            )}
           </TouchableOpacity>
         </View>
 
-        {/* Thẻ điểm sức khỏe tổng hợp (Health Score Widget) */}
-        {summary && (
-          <HealthScoreCard
-            score={summary.health_score.score}
-            label={summary.health_score.label}
-          />
-        )}
-
-        {/* 4 Widget Tóm tắt chỉ số */}
-        <View style={styles.widgetsGrid}>
-          <MetricWidget
-            title="Steps"
-            value={summary?.steps.count.toLocaleString() || '11,857'}
-            subtitle="updated 15 min ago"
-            icon="walk"
-            iconColor={COLORS.primary}
-            onPress={() => router.push('/dashboard/steps')}
-          />
-          <MetricWidget
-            title="Cycle tracking"
-            value={summary?.cycle ? `${summary.cycle.days_to_next} days` : '12 days'}
-            subtitle="before period"
-            icon="calendar"
-            iconColor={COLORS.accent}
-            onPress={() => router.push('/dashboard/cycle')}
-          />
-          <MetricWidget
-            title="Sleep"
-            value={summary ? `${Math.floor(summary.sleep.total_minutes / 60)}h ${summary.sleep.total_minutes % 60}min` : '7h 31 min'}
-            subtitle="updated a day ago"
-            icon="moon"
-            iconColor="#3B82F6"
-            onPress={() => router.push('/dashboard/sleep')}
-          />
-          <MetricWidget
-            title="Nutrition"
-            value={summary ? `${summary.nutrition.calories} kcal` : '960 kcal'}
-            subtitle="updated 5 min ago"
-            icon="restaurant"
-            iconColor={COLORS.warning}
-            onPress={() => router.push('/dashboard/nutrition')}
-          />
-        </View>
-
-        {/* Báo cáo tuần (This week report) */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>This week report</Text>
-            <TouchableOpacity onPress={() => router.push('/health-data')}>
-              <Text style={styles.viewMoreText}>View more</Text>
-            </TouchableOpacity>
+        {/* Today's Steps Quick Stats */}
+        <View style={styles.quickStats}>
+          <View style={styles.quickStatItem}>
+            <Ionicons name="walk" size={28} color={COLORS.primary} />
+            <Text style={styles.quickStatValue}>{todaySteps?.toLocaleString() ?? '-'}</Text>
+            <Text style={styles.quickStatLabel}>Steps</Text>
           </View>
-
-          <View style={styles.reportGrid}>
-            <View style={styles.reportCard}>
-              <Ionicons name="footsteps" size={20} color={COLORS.primary} />
-              <Text style={styles.reportValue}>{summary?.week_report.steps.toLocaleString() || '697,978'}</Text>
-              <Text style={styles.reportLabel}>Steps</Text>
-            </View>
-            <View style={styles.reportCard}>
-              <Ionicons name="fitness" size={20} color={COLORS.success} />
-              <Text style={styles.reportValue}>6h 45min</Text>
-              <Text style={styles.reportLabel}>Workout</Text>
-            </View>
-            <View style={styles.reportCard}>
-              <Ionicons name="water" size={20} color="#3B82F6" />
-              <Text style={styles.reportValue}>10,659 ml</Text>
-              <Text style={styles.reportLabel}>Water</Text>
-            </View>
-            <View style={styles.reportCard}>
-              <Ionicons name="bed" size={20} color="#8B5CF6" />
-              <Text style={styles.reportValue}>29h 17min</Text>
-              <Text style={styles.reportLabel}>Sleep</Text>
-            </View>
+          <View style={styles.quickStatDivider} />
+          <View style={styles.quickStatItem}>
+            <Ionicons name="flame" size={28} color={COLORS.warning} />
+            <Text style={styles.quickStatValue}>850</Text>
+            <Text style={styles.quickStatLabel}>Calories</Text>
+          </View>
+          <View style={styles.quickStatDivider} />
+          <View style={styles.quickStatItem}>
+            <Ionicons name="water" size={28} color="#3B82F6" />
+            <Text style={styles.quickStatValue}>2.1L</Text>
+            <Text style={styles.quickStatLabel}>Water</Text>
           </View>
         </View>
 
-        {/* Khám phá Blog / Kiến thức y tế */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Blogs</Text>
-            <TouchableOpacity onPress={() => router.push('/explore')}>
-              <Text style={styles.viewMoreText}>View more</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.blogScroll}>
+        {/* Features Grid */}
+        <Text style={styles.sectionTitle}>Quick Access</Text>
+        <View style={styles.grid}>
+          {FEATURES.map((feature) => (
             <TouchableOpacity
-              style={styles.blogCard}
-              onPress={() => router.push('/explore')}
+              key={feature.id}
+              style={[styles.card, { borderLeftColor: feature.color }]}
+              onPress={() => router.push(feature.route as any)}
+              activeOpacity={0.8}
             >
-              <View style={styles.blogImagePlaceholder}>
-                <Ionicons name="nutrition" size={32} color={COLORS.primary} />
+              <View style={[styles.iconWrap, { backgroundColor: feature.color + '15' }]}>
+                <Ionicons name={feature.icon as any} size={28} color={feature.color} />
               </View>
-              <Text style={styles.blogCategory}>Nutrition</Text>
-              <Text style={styles.blogTitle} numberOfLines={2}>
-                More about Apples: Benefits, nutrition, and tips
-              </Text>
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>{feature.title}</Text>
+                <Text style={styles.cardSubtitle}>{feature.subtitle}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
             </TouchableOpacity>
-          </ScrollView>
+          ))}
         </View>
+
+        {/* Sign Out */}
+        <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+          <Ionicons name="log-out" size={20} color={COLORS.danger} />
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
       </ScrollView>
 
-      {/* Thanh điều hướng dưới đáy */}
       <BottomTabBar currentRoute="/dashboard" onTabPress={(route) => router.push(route as any)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.bg,
-  },
-  scrollContent: {
-    paddingTop: 60,
-    paddingBottom: 30,
-  },
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 100 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
   },
-  dateText: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textTertiary,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  welcomeText: {
-    fontSize: FONT_SIZES['3xl'],
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-  },
-  avatarContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  greeting: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  name: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', color: COLORS.textPrimary },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
   },
-  widgetsGrid: {
+  avatarImage: { width: 44, height: 44, borderRadius: 22 },
+  quickStats: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    gap: 16,
-    marginTop: 20,
-  },
-  section: {
-    marginTop: 30,
-    paddingHorizontal: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-  },
-  viewMoreText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textTertiary,
-    fontWeight: '500',
-  },
-  reportGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  reportCard: {
-    width: '48%',
     backgroundColor: COLORS.card,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    marginHorizontal: 20,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: 20,
+    ...SHADOWS.sm,
   },
-  reportValue: {
+  quickStatItem: { flex: 1, alignItems: 'center' },
+  quickStatValue: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 4 },
+  quickStatLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2 },
+  quickStatDivider: { width: 1, backgroundColor: COLORS.border, marginHorizontal: 12 },
+  sectionTitle: {
     fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
     color: COLORS.textPrimary,
-    marginTop: 8,
+    paddingHorizontal: 20,
+    marginTop: 24,
+    marginBottom: 16,
   },
-  reportLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  blogScroll: {
-    marginTop: 4,
-  },
-  blogCard: {
-    width: 260,
+  grid: { paddingHorizontal: 20 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: 12,
-    marginRight: 16,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
+    borderLeftWidth: 4,
+    ...SHADOWS.sm,
   },
-  blogImagePlaceholder: {
-    height: 140,
-    borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.surface,
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginRight: 14,
   },
-  blogCategory: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.primary,
-    fontWeight: '600',
-    marginBottom: 4,
+  cardText: { flex: 1 },
+  cardTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
+  cardSubtitle: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2 },
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginTop: 30,
+    paddingVertical: 14,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.danger + '30',
   },
-  blogTitle: {
-    fontSize: FONT_SIZES.base,
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-  },
+  signOutText: { fontSize: FONT_SIZES.base, color: COLORS.danger, fontWeight: '600', marginLeft: 8 },
 });
