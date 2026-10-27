@@ -1,13 +1,14 @@
 /**
  * Màn hình Cycle Tracker - Ghi nhận chu kỳ và triệu chứng
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, TextInput,
+  Alert, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
@@ -54,6 +55,10 @@ export default function CycleScreen() {
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [entries, setEntries] = useState<CycleEntry[]>([]);
 
+  // Date picker state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState<Date>(new Date());
+
   useEffect(() => {
     if (!session) {
       router.replace('/auth/sign-in');
@@ -89,6 +94,24 @@ export default function CycleScreen() {
     }
   }
 
+  const formatDate = (date: Date): string => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const handleDateChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (event.type === 'set' && selectedDate) {
+      setPeriodStart(formatDate(selectedDate));
+      setTempDate(selectedDate);
+    }
+  }, []);
+
+  const openDatePicker = () => {
+    const d = periodStart ? new Date(periodStart) : new Date();
+    setTempDate(d);
+    setShowDatePicker(true);
+  };
+
   const handleLogPeriod = async () => {
     if (!periodStart) {
       Alert.alert('Lỗi', 'Vui lòng chọn ngày bắt đầu kỳ kinh');
@@ -123,8 +146,10 @@ export default function CycleScreen() {
     fetchData();
   };
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const daysToNext = periodStart
-    ? Math.ceil((new Date(periodStart).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    ? Math.ceil((new Date(periodStart).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
   if (loading) {
@@ -170,16 +195,15 @@ export default function CycleScreen() {
       <View style={styles.logSection}>
         <Text style={styles.sectionTitle}>Ghi nhận chu kỳ</Text>
 
-        <View style={styles.inputRow}>
+        <TouchableOpacity style={styles.inputRow} onPress={openDatePicker}>
           <Ionicons name="calendar" size={20} color={COLORS.textTertiary} />
-          <TextInput
-            style={styles.dateInput}
-            placeholder="Chọn ngày bắt đầu (YYYY-MM-DD)"
-            value={periodStart}
-            onChangeText={setPeriodStart}
-            keyboardType="default"
-          />
-        </View>
+          <Text style={styles.dateDisplay}>
+            {periodStart
+              ? new Date(periodStart).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+              : 'Chọn ngày bắt đầu'}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
+        </TouchableOpacity>
 
         {/* Symptom Selection */}
         <View style={styles.symptomSection}>
@@ -220,6 +244,17 @@ export default function CycleScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          display="spinner"
+          onChange={handleDateChange}
+          style={styles.picker}
+        />
+      )}
+
       {/* History */}
       <View style={styles.historySection}>
         <Text style={styles.historyTitle}>Lịch sử chu kỳ</Text>
@@ -234,11 +269,16 @@ export default function CycleScreen() {
             <View key={entry.id} style={styles.historyItem}>
               <View style={styles.historyLeft}>
                 <Text style={styles.historyDate}>
-                  {new Date(entry.period_start).toLocaleDateString('vi-VN')}
+                  {new Date(entry.period_start).toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short' })}
                 </Text>
                 {entry.symptom && (
                   <Text style={styles.historySymptom}>
                     Triệu chứng: {SYMPTOMS.find(s => s.value === entry.symptom)?.label}
+                  </Text>
+                )}
+                {entry.mood && (
+                  <Text style={styles.historySymptom}>
+                    Tâm trạng: {MOODS.find(m => m.value === entry.mood)?.label}
                   </Text>
                 )}
               </View>
@@ -309,7 +349,7 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: 16,
   },
-  dateInput: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
+  dateDisplay: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
   symptomSection: { marginBottom: 20 },
   moodSection: { marginBottom: 20 },
   subTitle: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 10 },
@@ -346,6 +386,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base },
+  picker: {
+    width: '100%',
+    height: 200,
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.lg,
+    marginVertical: 12,
+  },
   historySection: { marginTop: 20 },
   historyTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 12 },
   historyItem: {

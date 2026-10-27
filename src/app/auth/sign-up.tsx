@@ -35,11 +35,8 @@ export default function SignUpScreen() {
     if (error) {
       Alert.alert('Đăng ký thất bại', error.message);
     } else {
-      Alert.alert(
-        'Đăng ký thành công 🎉',
-        'Vui lòng kiểm tra email để xác nhận tài khoản.',
-        [{ text: 'OK', onPress: () => router.replace('/auth/sign-in') }]
-      );
+      // Đăng ký thành công - chuyển đến onboarding
+      router.replace('/onboarding');
     }
   };
 

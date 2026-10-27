@@ -1,13 +1,14 @@
 /**
  * Màn hình Sleep Tracker - Ghi nhận giấc ngủ và xem lịch sử
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, TextInput, ActivityIndicator,
+  Alert, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
@@ -20,7 +21,11 @@ interface SleepEntry {
   rem_minutes: number;
   quality_score: number | null;
   sleep_date: string;
+  bedtime_at?: string | null;
+  wake_at?: string | null;
 }
+
+type PickerMode = 'bedtime' | 'wake' | null;
 
 export default function SleepScreen() {
   const router = useRouter();
@@ -32,6 +37,11 @@ export default function SleepScreen() {
   const [bedtime, setBedtime] = useState('22:00');
   const [wakeTime, setWakeTime] = useState('07:00');
   const [entries, setEntries] = useState<SleepEntry[]>([]);
+
+  // Time picker state
+  const [showBedtimePicker, setShowBedtimePicker] = useState(false);
+  const [showWakePicker, setShowWakePicker] = useState(false);
+  const [tempTime, setTempTime] = useState<Date>(new Date());
 
   useEffect(() => {
     if (!session) {
@@ -49,12 +59,22 @@ export default function SleepScreen() {
       const today = new Date().toISOString().split('T')[0];
       const { data } = await supabase
         .from('sleep_records')
-        .select('total_minutes')
+        .select('*')
         .eq('user_id', session.user.id)
         .eq('sleep_date', today)
         .single();
 
-      if (data) setTodaySleep(data.total_minutes);
+      if (data) {
+        setTodaySleep(data.total_minutes);
+        if (data.bedtime_at) {
+          const d = new Date(data.bedtime_at);
+          setBedtime(formatTime(d));
+        }
+        if (data.wake_at) {
+          const d = new Date(data.wake_at);
+          setWakeTime(formatTime(d));
+        }
+      }
 
       // Fetch goal
       const { data: profileData } = await supabase
@@ -64,8 +84,8 @@ export default function SleepScreen() {
         .single();
       if (profileData) {
         setGoal(profileData.sleep_goal_minutes || 480);
-        if (profileData.bedtime) setBedtime(profileData.bedtime);
-        if (profileData.wake_time) setWakeTime(profileData.wake_time);
+        if (profileData.bedtime) setBedtime(parseTimeValue(profileData.bedtime));
+        if (profileData.wake_time) setWakeTime(parseTimeValue(profileData.wake_time));
       }
 
       // Fetch history
@@ -83,6 +103,55 @@ export default function SleepScreen() {
     }
   }
 
+  function formatTime(date: Date): string {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  }
+
+  function parseTimeValue(value: string | null): string {
+    if (!value) return '22:00';
+    // Handle "HH:MM" format from profiles table
+    if (value.includes(':') && !value.includes('T')) {
+      return value.slice(0, 5);
+    }
+    // Handle ISO string
+    const d = new Date(value);
+    return formatTime(d);
+  }
+
+  const handleBedtimeChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowBedtimePicker(false);
+    if (event.type === 'set' && selectedDate) {
+      const timeStr = formatTime(selectedDate);
+      setBedtime(timeStr);
+      setTempTime(selectedDate);
+    }
+  }, []);
+
+  const handleWakeChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowWakePicker(false);
+    if (event.type === 'set' && selectedDate) {
+      const timeStr = formatTime(selectedDate);
+      setWakeTime(timeStr);
+      setTempTime(selectedDate);
+    }
+  }, []);
+
+  const openBedtimePicker = () => {
+    const [h, m] = bedtime.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    setTempTime(d);
+    setShowBedtimePicker(true);
+  };
+
+  const openWakePicker = () => {
+    const [h, m] = wakeTime.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    setTempTime(d);
+    setShowWakePicker(true);
+  };
+
   const handleLogSleep = async () => {
     if (!bedtime || !wakeTime) {
       Alert.alert('Lỗi', 'Vui lòng nhập giờ đi ngủ và giờ thức dậy');
@@ -95,11 +164,21 @@ export default function SleepScreen() {
     let totalMinutes = (wakeH * 60 + wakeM) - (bedH * 60 + bedM);
     if (totalMinutes < 0) totalMinutes += 24 * 60; // Overnight
 
+    // Build ISO timestamps for bedtime and wake time today/tomorrow
+    const today = new Date();
+    const bedtimeDate = new Date(today);
+    bedtimeDate.setHours(bedH, bedM, 0, 0);
+    const wakeDate = new Date(today);
+    wakeDate.setHours(wakeH, wakeM, 0, 0);
+    if (wakeDate <= bedtimeDate) {
+      wakeDate.setDate(wakeDate.getDate() + 1);
+    }
+
     const { error } = await supabase.from('sleep_records').insert({
       user_id: session?.user.id,
       sleep_date: new Date().toISOString().split('T')[0],
-      bedtime_at: bedtime,
-      wake_at: wakeTime,
+      bedtime_at: bedtimeDate.toISOString(),
+      wake_at: wakeDate.toISOString(),
       total_minutes: totalMinutes,
       deep_minutes: Math.round(totalMinutes * 0.2),
       light_minutes: Math.round(totalMinutes * 0.5),
@@ -170,16 +249,18 @@ export default function SleepScreen() {
       <View style={styles.scheduleCard}>
         <Text style={styles.scheduleTitle}>Lịch ngủ hiện tại</Text>
         <View style={styles.scheduleRow}>
-          <View style={styles.scheduleItem}>
+          <TouchableOpacity style={styles.scheduleItem} onPress={openBedtimePicker}>
             <Ionicons name="bed" size={24} color={COLORS.danger} />
             <Text style={styles.scheduleLabel}>Giờ đi ngủ</Text>
             <Text style={styles.scheduleValue}>{bedtime}</Text>
-          </View>
-          <View style={styles.scheduleItem}>
+            <Ionicons name="chevron-down" size={16} color={COLORS.textTertiary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.scheduleItem} onPress={openWakePicker}>
             <Ionicons name="sunny" size={24} color={COLORS.warning} />
             <Text style={styles.scheduleLabel}>Giờ thức dậy</Text>
             <Text style={styles.scheduleValue}>{wakeTime}</Text>
-          </View>
+            <Ionicons name="chevron-down" size={16} color={COLORS.textTertiary} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -193,28 +274,42 @@ export default function SleepScreen() {
       {showLog && (
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>Ghi nhận giấc ngủ</Text>
-          <View style={styles.inputRow}>
+          <TouchableOpacity style={styles.inputRow} onPress={openBedtimePicker}>
             <Ionicons name="bed" size={20} color={COLORS.textTertiary} />
-            <TextInput
-              style={styles.input}
-              placeholder="Giờ đi ngủ (HH:MM)"
-              value={bedtime}
-              onChangeText={setBedtime}
-            />
-          </View>
-          <View style={styles.inputRow}>
+            <Text style={styles.inputValue}>{bedtime}</Text>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.inputRow} onPress={openWakePicker}>
             <Ionicons name="sunny" size={20} color={COLORS.warning} />
-            <TextInput
-              style={styles.input}
-              placeholder="Giờ thức dậy (HH:MM)"
-              value={wakeTime}
-              onChangeText={setWakeTime}
-            />
-          </View>
+            <Text style={styles.inputValue}>{wakeTime}</Text>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.submitBtn} onPress={handleLogSleep}>
             <Text style={styles.submitBtnText}>Ghi nhận</Text>
           </TouchableOpacity>
         </View>
+      )}
+
+      {/* Time Pickers (rendered outside scroll) */}
+      {showBedtimePicker && (
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          is24Hour={true}
+          display="spinner"
+          onChange={handleBedtimeChange}
+          style={styles.picker}
+        />
+      )}
+      {showWakePicker && (
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          is24Hour={true}
+          display="spinner"
+          onChange={handleWakeChange}
+          style={styles.picker}
+        />
       )}
 
       {/* History */}
@@ -229,9 +324,16 @@ export default function SleepScreen() {
         ) : (
           entries.map(entry => (
             <View key={entry.id} style={styles.historyItem}>
-              <Text style={styles.historyDate}>
-                {new Date(entry.sleep_date).toLocaleDateString('vi-VN')}
-              </Text>
+              <View>
+                <Text style={styles.historyDate}>
+                  {new Date(entry.sleep_date).toLocaleDateString('vi-VN')}
+                </Text>
+                {entry.bedtime_at && (
+                  <Text style={styles.historyTime}>
+                    {formatTime(new Date(entry.bedtime_at))} - {entry.wake_at ? formatTime(new Date(entry.wake_at)) : ''}
+                  </Text>
+                )}
+              </View>
               <View style={styles.historyStats}>
                 <Ionicons name="moon" size={16} color={COLORS.primary} />
                 <Text style={styles.historyValue}>
@@ -298,8 +400,8 @@ const styles = StyleSheet.create({
   },
   scheduleTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', marginBottom: 12 },
   scheduleRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  scheduleItem: { alignItems: 'center' },
-  scheduleLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 8 },
+  scheduleItem: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  scheduleLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
   scheduleValue: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary },
   logBtn: {
     flexDirection: 'row',
@@ -329,7 +431,7 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: 12,
   },
-  input: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
+  inputValue: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
   submitBtn: {
     backgroundColor: COLORS.success,
     paddingVertical: 14,
@@ -338,6 +440,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base },
+  picker: {
+    width: '100%',
+    height: 200,
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.lg,
+    marginVertical: 12,
+  },
   historySection: { marginTop: 20 },
   historyTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 12 },
   historyItem: {
@@ -351,6 +460,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   historyDate: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  historyTime: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary, marginTop: 2 },
   historyStats: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   historyValue: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
   historyQuality: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary },

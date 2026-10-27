@@ -11,6 +11,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  isProfileComplete: () => boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -66,6 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           if (createError) {
             console.error('Lỗi tạo profile:', createError);
+          } else {
+            // Fetch lại profile vừa tạo
+            const { data: newData, error: fetchError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', userId)
+              .single();
+            if (!fetchError && newData) {
+              setProfile(newData);
+            }
           }
         }
         return;
@@ -82,6 +94,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         if (createError) {
           console.error('Lỗi tạo profile:', createError);
+        } else {
+          // Fetch lại profile vừa tạo
+          const { data: newData, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          if (!fetchError && newData) {
+            setProfile(newData);
+          }
         }
         return;
       }
@@ -126,6 +148,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   }
 
+  async function refreshProfile() {
+    if (!session?.user) return;
+    await fetchProfile(session.user.id);
+  }
+
+  function isProfileComplete(): boolean {
+    if (!profile) return false;
+    return !!(profile.full_name && profile.gender !== 'unspecified' && profile.height_cm && profile.weight_kg);
+  }
+
   return (
     <AuthContext.Provider value={{
       session,
@@ -134,6 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut,
+      isProfileComplete,
+      refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

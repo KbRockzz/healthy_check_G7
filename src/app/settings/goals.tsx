@@ -2,13 +2,14 @@
  * Màn hình thiết lập mục tiêu hàng ngày
  * Hiển thị khi người dùng chưa có profile hoặc muốn thay đổi goals
  */
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, TextInput, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
@@ -44,8 +45,47 @@ export default function GoalSetupScreen() {
     wake_time: profile.wake_time,
   } : DEFAULT_GOALS);
 
+  // Time picker state
+  const [showBedtimePicker, setShowBedtimePicker] = useState(false);
+  const [showWakePicker, setShowWakePicker] = useState(false);
+  const [tempTime, setTempTime] = useState<Date>(new Date());
+
   const handleChange = (key: keyof Goals, value: string) => {
     setGoals(prev => ({ ...prev, [key]: value }));
+  };
+
+  const formatTime = (date: Date): string => {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const handleBedtimePickerChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowBedtimePicker(false);
+    if (event.type === 'set' && selectedDate) {
+      setGoals(prev => ({ ...prev, bedtime: formatTime(selectedDate) }));
+    }
+  }, []);
+
+  const handleWakePickerChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowWakePicker(false);
+    if (event.type === 'set' && selectedDate) {
+      setGoals(prev => ({ ...prev, wake_time: formatTime(selectedDate) }));
+    }
+  }, []);
+
+  const openBedtimePicker = () => {
+    const [h, m] = goals.bedtime.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    setTempTime(d);
+    setShowBedtimePicker(true);
+  };
+
+  const openWakePicker = () => {
+    const [h, m] = goals.wake_time.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    setTempTime(d);
+    setShowWakePicker(true);
   };
 
   const handleSave = async () => {
@@ -167,24 +207,26 @@ export default function GoalSetupScreen() {
           />
           <Text style={styles.inputSuffix}>phút/ngày</Text>
         </View>
-        <View style={[styles.inputRow, { marginTop: 10 }]}>
+
+        {/* Bedtime Picker */}
+        <TouchableOpacity
+          style={[styles.inputRow, { marginTop: 10, height: 'auto', paddingVertical: 14 }]}
+          onPress={openBedtimePicker}
+        >
           <Text style={styles.timeLabel}>Giờ đi ngủ:</Text>
-          <TextInput
-            style={styles.timeInput}
-            value={goals.bedtime}
-            onChangeText={(v) => handleChange('bedtime', v)}
-            placeholder="22:00"
-          />
-        </View>
-        <View style={styles.inputRow}>
+          <Text style={styles.timeDisplay}>{goals.bedtime}</Text>
+          <Ionicons name="chevron-down" size={18} color={COLORS.textTertiary} />
+        </TouchableOpacity>
+
+        {/* Wake Time Picker */}
+        <TouchableOpacity
+          style={styles.inputRow}
+          onPress={openWakePicker}
+        >
           <Text style={styles.timeLabel}>Giờ thức dậy:</Text>
-          <TextInput
-            style={styles.timeInput}
-            value={goals.wake_time}
-            onChangeText={(v) => handleChange('wake_time', v)}
-            placeholder="07:00"
-          />
-        </View>
+          <Text style={styles.timeDisplay}>{goals.wake_time}</Text>
+          <Ionicons name="chevron-down" size={18} color={COLORS.textTertiary} />
+        </TouchableOpacity>
       </View>
 
       {/* Save Button */}
@@ -199,6 +241,26 @@ export default function GoalSetupScreen() {
           <Text style={styles.saveBtnText}>Lưu mục tiêu</Text>
         )}
       </TouchableOpacity>
+
+      {/* Time Pickers */}
+      {showBedtimePicker && (
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          is24Hour={true}
+          display="spinner"
+          onChange={handleBedtimePickerChange}
+        />
+      )}
+      {showWakePicker && (
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          is24Hour={true}
+          display="spinner"
+          onChange={handleWakePickerChange}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -261,14 +323,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     width: 90,
   },
-  timeInput: {
+  timeDisplay: {
     flex: 1,
     fontSize: FONT_SIZES.base,
     color: COLORS.textPrimary,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: 14,
-    height: 48,
+    marginLeft: 10,
+    fontWeight: '500',
   },
   saveBtn: {
     backgroundColor: COLORS.primary,
