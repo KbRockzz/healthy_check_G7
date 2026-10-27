@@ -55,8 +55,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Lỗi lấy profile:', error);
+        // Nếu không tìm thấy profile, tự tạo mới
+        if (error.code === 'PGRST116' || error.message?.includes('Results contain 0 rows') || error.message?.includes('404')) {
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              full_name: 'User',
+              gender: 'unspecified',
+            });
+          if (createError) {
+            console.error('Lỗi tạo profile:', createError);
+          }
+        }
         return;
       }
+
+      // Nếu data null (không tìm thấy), tự tạo
+      if (!data) {
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            full_name: 'User',
+            gender: 'unspecified',
+          });
+        if (createError) {
+          console.error('Lỗi tạo profile:', createError);
+        }
+        return;
+      }
+
       setProfile(data);
     } catch (err) {
       console.error(err);
