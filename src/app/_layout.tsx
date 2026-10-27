@@ -37,8 +37,10 @@ function AuthWrapper() {
         <Stack.Screen name="dashboard/cycle" options={{ title: 'Cycle' }} />
         <Stack.Screen name="health-data" options={{ title: 'Health Data' }} />
         <Stack.Screen name="explore" options={{ title: 'Explore' }} />
+        <Stack.Screen name="explore/[slug]" options={{ title: 'Bài viết' }} />
         <Stack.Screen name="share" options={{ title: 'Sharing' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
+        <Stack.Screen name="settings/goals" options={{ title: 'Goals' }} />
       </Stack>
     </>
   );

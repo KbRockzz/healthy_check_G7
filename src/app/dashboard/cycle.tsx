@@ -1,89 +1,374 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+/**
+ * Màn hình Cycle Tracker - Ghi nhận chu kỳ và triệu chứng
+ */
+import { useState, useEffect } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Alert, ActivityIndicator, TextInput,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { useAuth } from '@/lib/hooks/use-auth';
+import { supabase } from '@/lib/supabase';
 
-/**
- * Màn hình Theo dõi chu kỳ kinh nguyệt (Cycle Tracker) — Mockup #10
- */
-export default function CycleTrackerScreen() {
+type SymptomType = 'cramps' | 'headache' | 'acne' | 'fatigue' | 'bloating' | 'back_pain' | 'nausea' | 'none';
+type MoodType = 'happy' | 'neutral' | 'sad' | 'anxious' | 'irritated' | 'tired';
+
+interface CycleEntry {
+  id: number;
+  period_start: string;
+  period_end: string | null;
+  cycle_length: number | null;
+  symptom: SymptomType | null;
+  mood: MoodType | null;
+}
+
+const SYMPTOMS: { value: SymptomType; label: string; icon: string }[] = [
+  { value: 'cramps', label: 'Đau bụng', icon: 'alert-circle' },
+  { value: 'headache', label: 'Đau đầu', icon: 'brain' },
+  { value: 'acne', label: 'Mụn', icon: 'sparkles' },
+  { value: 'fatigue', label: 'Mệt mỏi', icon: 'sleep' },
+  { value: 'bloating', label: 'Chướng bụng', icon: 'ellipse' },
+  { value: 'back_pain', label: 'Đau lưng', icon: 'person' },
+  { value: 'nausea', label: 'Buồn nôn', icon: 'restaurant' },
+  { value: 'none', label: 'Không có', icon: 'checkmark-circle' },
+];
+
+const MOODS: { value: MoodType; label: string; icon: string; color: string }[] = [
+  { value: 'happy', label: 'Vui', icon: 'happy', color: '#10B981' },
+  { value: 'neutral', label: 'Bình thường', icon: 'meh', color: COLORS.primary },
+  { value: 'sad', label: 'Buồn', icon: 'sad', color: '#3B82F6' },
+  { value: 'anxious', label: 'Lo lắng', icon: 'alert', color: COLORS.warning },
+  { value: 'irritated', label: 'Cáu gắt', icon: 'flame', color: COLORS.danger },
+  { value: 'tired', label: 'Mệt mỏi', icon: 'moon', color: '#8B5CF6' },
+];
+
+export default function CycleScreen() {
   const router = useRouter();
+  const { session, profile } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [cycleLength, setCycleLength] = useState(28);
+  const [periodStart, setPeriodStart] = useState('');
+  const [selectedSymptom, setSelectedSymptom] = useState<SymptomType | null>(null);
+  const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
+  const [entries, setEntries] = useState<CycleEntry[]>([]);
 
-  const symptoms = ['cramps', 'headache', 'acne', 'fatigue', 'bloating', 'back_pain', 'nausea', 'none'];
-  const moods = ['happy', 'neutral', 'sad', 'anxious', 'irritated', 'tired'];
+  useEffect(() => {
+    if (!session) {
+      router.replace('/auth/sign-in');
+      return;
+    }
+    fetchData();
+  }, [session]);
+
+  async function fetchData() {
+    if (!session) return;
+    setLoading(true);
+    try {
+      // Fetch profile cycle data
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('cycle_length_days')
+        .eq('id', session.user.id)
+        .single();
+      if (profileData?.cycle_length_days) setCycleLength(profileData.cycle_length_days);
+
+      // Fetch history
+      const { data } = await supabase
+        .from('cycle_records')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('period_start', { ascending: false })
+        .limit(10);
+      if (data) setEntries(data as CycleEntry[]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleLogPeriod = async () => {
+    if (!periodStart) {
+      Alert.alert('Lỗi', 'Vui lòng chọn ngày bắt đầu kỳ kinh');
+      return;
+    }
+
+    const { error } = await supabase.from('cycle_records').insert({
+      user_id: session?.user.id,
+      period_start: periodStart,
+      period_end: null,
+      cycle_length: cycleLength,
+      symptom: selectedSymptom,
+      mood: selectedMood,
+      is_predicted: false,
+    });
+
+    if (error) {
+      Alert.alert('Lỗi', error.message || 'Không thể ghi nhận');
+      return;
+    }
+
+    Alert.alert(
+      'Đã ghi nhận! 📅',
+      `Ngày bắt đầu kỳ kinh: ${new Date(periodStart).toLocaleDateString('vi-VN')}`,
+      [{ text: 'OK' }]
+    );
+
+    // Reset
+    setPeriodStart('');
+    setSelectedSymptom(null);
+    setSelectedMood(null);
+    fetchData();
+  };
+
+  const daysToNext = periodStart
+    ? Math.ceil((new Date(periodStart).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Ionicons name="arrow-back" size={24} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Cycle</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={() => router.push('/settings/goals')}>
+          <Ionicons name="settings-outline" size={24} color={COLORS.textPrimary} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Your average time of cycle is 28 days</Text>
+      {/* Cycle Overview */}
+      <View style={styles.overviewCard}>
+        <View style={styles.cycleCircle}>
+          <Ionicons name="calendar" size={48} color={COLORS.accent} />
+          <Text style={styles.cycleDay}>
+            {daysToNext !== null ? `Ngày ${28 - daysToNext}` : 'Chu kỳ 28 ngày'}
+          </Text>
+          <Text style={styles.cycleSub}>{cycleLength} ngày</Text>
+        </View>
+        {daysToNext !== null && daysToNext > 0 && (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoText}>
+              {daysToNext} ngày tới kỳ kinh tiếp theo
+            </Text>
+          </View>
+        )}
+      </View>
 
-        <View style={styles.circleContainer}>
-          <Text style={styles.cycleDay}>Day 14</Text>
-          <Text style={styles.cycleSub}>of 28 days</Text>
+      {/* Log Period */}
+      <View style={styles.logSection}>
+        <Text style={styles.sectionTitle}>Ghi nhận chu kỳ</Text>
+
+        <View style={styles.inputRow}>
+          <Ionicons name="calendar" size={20} color={COLORS.textTertiary} />
+          <TextInput
+            style={styles.dateInput}
+            placeholder="Chọn ngày bắt đầu (YYYY-MM-DD)"
+            value={periodStart}
+            onChangeText={setPeriodStart}
+            keyboardType="default"
+          />
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.badge}>Ovulation Window</Text>
-          <Text style={styles.sub}>Peak fertility days detected</Text>
-        </View>
-
-        <View style={styles.calendar}>
-          {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28].map(d => (
-            <View key={d} style={[styles.day, d === 14 && styles.dayActive]}><Text style={d === 14 ? styles.dayActiveText : styles.dayText}>{d}</Text></View>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Log Symptoms</Text>
+        {/* Symptom Selection */}
+        <View style={styles.symptomSection}>
+          <Text style={styles.subTitle}>Triệu chứng</Text>
           <View style={styles.grid}>
-            {symptoms.map(s => (
-              <TouchableOpacity key={s} style={styles.iconBtn}><Text>{s}</Text></TouchableOpacity>
+            {SYMPTOMS.map(s => (
+              <TouchableOpacity
+                key={s.value}
+                style={[styles.symptomBtn, selectedSymptom === s.value && styles.symptomBtnActive]}
+                onPress={() => setSelectedSymptom(s.value === selectedSymptom ? null : s.value)}
+              >
+                <Ionicons name={s.icon as any} size={20} color={selectedSymptom === s.value ? COLORS.textInverse : COLORS.textSecondary} />
+                <Text style={[styles.symptomText, selectedSymptom === s.value && styles.symptomTextActive]}>{s.label}</Text>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>How do you feel?</Text>
+        {/* Mood Selection */}
+        <View style={styles.moodSection}>
+          <Text style={styles.subTitle}>Tâm trạng</Text>
           <View style={styles.grid}>
-            {moods.map(m => (
-              <TouchableOpacity key={m} style={[styles.iconBtn, {backgroundColor: COLORS.surface}]}><Text>{m}</Text></TouchableOpacity>
+            {MOODS.map(m => (
+              <TouchableOpacity
+                key={m.value}
+                style={[styles.moodBtn, selectedMood === m.value && styles.moodBtnActive]}
+                onPress={() => setSelectedMood(m.value === selectedMood ? null : m.value)}
+              >
+                <Ionicons name={m.icon as any} size={20} color={selectedMood === m.value ? m.color : COLORS.textSecondary} />
+                <Text style={[styles.moodText, selectedMood === m.value && styles.moodTextActive]}>{m.label}</Text>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        <TouchableOpacity style={styles.btn}><Text style={styles.btnText}>Log Symptoms</Text></TouchableOpacity>
-      </ScrollView>
-    </View>
+        <TouchableOpacity style={styles.submitBtn} onPress={handleLogPeriod}>
+          <Text style={styles.submitBtnText}>Ghi nhận</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* History */}
+      <View style={styles.historySection}>
+        <Text style={styles.historyTitle}>Lịch sử chu kỳ</Text>
+        {entries.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={48} color={COLORS.textTertiary} />
+            <Text style={styles.emptyText}>Chưa có dữ liệu</Text>
+            <Text style={styles.emptySub}>Hãy ghi nhận chu kỳ đầu tiên</Text>
+          </View>
+        ) : (
+          entries.map(entry => (
+            <View key={entry.id} style={styles.historyItem}>
+              <View style={styles.historyLeft}>
+                <Text style={styles.historyDate}>
+                  {new Date(entry.period_start).toLocaleDateString('vi-VN')}
+                </Text>
+                {entry.symptom && (
+                  <Text style={styles.historySymptom}>
+                    Triệu chứng: {SYMPTOMS.find(s => s.value === entry.symptom)?.label}
+                  </Text>
+                )}
+              </View>
+              {entry.cycle_length && (
+                <View style={styles.cycleLengthBadge}>
+                  <Text style={styles.cycleLengthText}>{entry.cycle_length} ngày</Text>
+                </View>
+              )}
+            </View>
+          ))
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, paddingTop: 60 },
-  headerTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold' },
-  content: { padding: 20 },
-  title: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
-  circleContainer: { height: 200, width: 200, borderRadius: 100, borderWidth: 10, borderColor: COLORS.accent, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 30 },
-  cycleDay: { fontSize: FONT_SIZES['4xl'], fontWeight: 'bold', color: COLORS.accent },
-  cycleSub: { color: COLORS.textSecondary },
-  card: { backgroundColor: COLORS.accent, padding: 20, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', marginBottom: 30, ...SHADOWS.md },
-  badge: { color: COLORS.textInverse, fontWeight: 'bold', fontSize: FONT_SIZES.lg },
-  sub: { color: COLORS.textInverse, marginTop: 5 },
-  calendar: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 30 },
-  day: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center', margin: 2 },
-  dayActive: { backgroundColor: COLORS.accent },
-  dayActiveText: { color: COLORS.textInverse, fontWeight: 'bold' },
-  dayText: { color: COLORS.textSecondary },
-  section: { marginBottom: 25 },
-  sectionTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 15 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  iconBtn: { backgroundColor: COLORS.surface, padding: 15, borderRadius: BORDER_RADIUS.md, minWidth: 80, alignItems: 'center' },
-  btn: { width: '100%', backgroundColor: COLORS.accent, padding: 18, borderRadius: BORDER_RADIUS.full, alignItems: 'center' },
-  btnText: { color: COLORS.textInverse, fontWeight: 'bold', fontSize: FONT_SIZES.base }
+  content: { padding: 20, paddingBottom: 40 },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 60,
+    marginBottom: 20,
+  },
+  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
+  overviewCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: 20,
+    alignItems: 'center',
+    ...SHADOWS.sm,
+  },
+  cycleCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: COLORS.accent + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cycleDay: { fontSize: 24, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 8 },
+  cycleSub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  infoCard: {
+    backgroundColor: COLORS.accent + '15',
+    borderRadius: BORDER_RADIUS.md,
+    padding: 12,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  infoText: { fontSize: FONT_SIZES.sm, color: COLORS.accent, fontWeight: '600' },
+  logSection: {
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: 16,
+    marginTop: 20,
+    ...SHADOWS.sm,
+  },
+  sectionTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 16 },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: 14,
+    height: 48,
+    marginBottom: 16,
+  },
+  dateInput: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
+  symptomSection: { marginBottom: 20 },
+  moodSection: { marginBottom: 20 },
+  subTitle: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 10 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  symptomBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
+  },
+  symptomBtnActive: { backgroundColor: COLORS.accent + '20' },
+  symptomText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  symptomTextActive: { color: COLORS.accent, fontWeight: '600' },
+  moodBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
+  },
+  moodBtnActive: { backgroundColor: COLORS.primary + '20' },
+  moodText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  moodTextActive: { color: COLORS.primary, fontWeight: '600' },
+  submitBtn: {
+    backgroundColor: COLORS.accent,
+    paddingVertical: 14,
+    borderRadius: BORDER_RADIUS.full,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base },
+  historySection: { marginTop: 20 },
+  historyTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 12 },
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.md,
+    padding: 14,
+    marginBottom: 8,
+    ...SHADOWS.sm,
+  },
+  historyLeft: { flex: 1 },
+  historyDate: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
+  historySymptom: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 4 },
+  cycleLengthBadge: {
+    backgroundColor: COLORS.primary + '15',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  cycleLengthText: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: '600' },
+  emptyState: { alignItems: 'center', paddingVertical: 30 },
+  emptyText: { fontSize: FONT_SIZES.lg, fontWeight: '600', color: COLORS.textPrimary, marginTop: 12 },
+  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 4 },
 });
