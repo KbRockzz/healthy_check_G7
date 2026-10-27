@@ -8,10 +8,14 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/hooks/use-auth';
 import { useSplashScreen } from '@/lib/hooks/use-splash-screen';
+import { useDeepLinking } from '@/lib/hooks/use-deep-linking';
 
 function AuthWrapper() {
   const { isSplashReady } = useSplashScreen();
   const { session } = useAuth();
+
+  // Handle deep linking for auth callbacks
+  useDeepLinking();
 
   if (!isSplashReady) return null;
 

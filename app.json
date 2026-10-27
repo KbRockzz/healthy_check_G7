@@ -23,8 +23,10 @@
         "foregroundImage": "./assets/icons/adaptive-icon.png",
         "backgroundColor": "#0EA5E9"
       },
-      "package": "com.healthycheck.g7"
+      "package": "com.healthycheck.g7",
+      "scheme": "healthy-check-g7"
     },
+    "scheme": "healthy-check-g7",
     "web": {
       "favicon": "./assets/icons/favicon.png"
     },
