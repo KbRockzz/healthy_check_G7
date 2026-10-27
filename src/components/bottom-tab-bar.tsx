@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS } from '@/src/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS } from '@/theme';
 
 const TABS = [
   { name: 'Overview', icon: 'bar-chart-outline', activeIcon: 'bar-chart', route: '/dashboard' },

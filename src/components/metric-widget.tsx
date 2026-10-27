@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/src/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
 
 interface MetricWidgetProps {
   title: string;
@@ -31,7 +31,7 @@ export default function MetricWidget({
       activeOpacity={0.8}
     >
       <View style={styles.iconContainer}>
-        <Ionicons name={icon} size={24} color={iconColor} />
+        <Ionicons name={icon as any} size={24} color={iconColor} />
       </View>
 
       <Text style={styles.title}>{title}</Text>

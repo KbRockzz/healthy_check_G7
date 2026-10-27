@@ -11,39 +11,30 @@
       "resizeMode": "contain",
       "backgroundColor": "#0EA5E9"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.healthycheck.g7",
-      "infoPlist": {
-        "NSHealthShareUsageDescription": "Ứng dụng cần đọc dữ liệu sức khỏe để theo dõi bước chân, giấc ngủ và dinh dưỡng.",
-        "NSHealthUpdateUsageDescription": "Ứng dụng cần ghi dữ liệu sức khỏe để cập nhật tiến bộ cá nhân."
-      }
+      "bundleIdentifier": "com.healthycheck.g7"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/adaptive-icon.png",
         "backgroundColor": "#0EA5E9"
       },
-      "package": "com.healthycheck.g7",
-      "permissions": [
-        "ACTIVITY_RECOGNITION",
-        "BODY_SENSORS"
-      ]
+      "package": "com.healthycheck.g7"
     },
     "web": {
-      "favicon": "./assets/icons/favicon.png",
-      "bundler": "metro"
+      "favicon": "./assets/icons/favicon.png"
     },
     "plugins": [
       "expo-router",
-      "expo-constants",
-      [
-        "expo-auth-session",
-        {
-          "useProxy": false
-        }
-      ]
-    ]
+      "expo-secure-store"
+    ],
+    "extra": {
+      "EXPO_PUBLIC_SUPABASE_URL": "https://pmaxtdfevzncqpbamwcq.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtYXh0ZGZldnpuY3FwYmFtd2NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5ODY5NDEsImV4cCI6MjEwODU2Mjk0MX0.LoBewo64m-Bf98GTSniPO4CNw93FxWiq3nj1xmm_JZQ"
+    }
   }
 }

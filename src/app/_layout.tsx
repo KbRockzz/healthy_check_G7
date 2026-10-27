@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useSplashScreen } from '@/src/lib/hooks/use-splash-screen';
+import { useSplashScreen } from '@/lib/hooks/use-splash-screen';
 
 /**
  * Root layout — chứa Stack navigation và StatusBar

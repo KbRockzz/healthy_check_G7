@@ -1,8 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS } from '@/src/theme';
-import BottomTabBar from '@/src/components/bottom-tab-bar';
+import { COLORS, FONT_SIZES, BORDER_RADIUS } from '@/theme';
+import BottomTabBar from '@/components/bottom-tab-bar';
 
 /**
  * Màn hình Thiết lập chia sẻ thông tin sức khỏe (Share Health Information Screen) — Mockup #2

@@ -1,8 +1,8 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS } from '@/src/theme';
-import BottomTabBar from '@/src/components/bottom-tab-bar';
+import { COLORS, FONT_SIZES, BORDER_RADIUS } from '@/theme';
+import BottomTabBar from '@/components/bottom-tab-bar';
 
 /**
  * Màn hình Khám phá kiến thức y tế (Explore Screen) — Mockup #5

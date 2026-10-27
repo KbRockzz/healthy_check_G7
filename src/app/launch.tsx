@@ -1,6 +1,6 @@
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/src/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
 
 /**
  * Màn hình Khởi động và Giới thiệu (Launch Screen) — Mockup #3
@@ -21,7 +21,7 @@ export default function LaunchScreen() {
       {/* Ảnh banner người phụ nữ đang chạy bộ */}
       <View style={styles.imageContainer}>
         <Image
-          source={require('@/assets/images/runner.png')}
+          source={require('../../assets/images/runner.png')}
           style={styles.image}
           resizeMode="cover"
         />
@@ -33,7 +33,7 @@ export default function LaunchScreen() {
         {/* Logo ứng dụng */}
         <View style={styles.logoBadge}>
           <Image
-            source={require('@/assets/icons/logo-icon.png')}
+            source={require('../../assets/icons/logo-icon.png')}
             style={styles.logoIcon}
           />
         </View>

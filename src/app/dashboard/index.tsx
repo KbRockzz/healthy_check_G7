@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS } from '@/src/theme';
-import { supabase, DashboardSummary } from '@/src/lib/supabase';
-import HealthScoreCard from '@/src/components/health-score-card';
-import MetricWidget from '@/src/components/metric-widget';
-import BottomTabBar from '@/src/components/bottom-tab-bar';
+import { COLORS, FONT_SIZES, BORDER_RADIUS } from '@/theme';
+import { supabase, DashboardSummary } from '@/lib/supabase';
+import HealthScoreCard from '@/components/health-score-card';
+import MetricWidget from '@/components/metric-widget';
+import BottomTabBar from '@/components/bottom-tab-bar';
 
 /**
  * Màn hình Bảng tin tổng quan sức khỏe (Home - Dashboard / Overview) — Mockup #4

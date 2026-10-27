@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/src/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
 
 interface HealthScoreCardProps {
   score: number;

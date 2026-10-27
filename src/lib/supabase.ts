@@ -240,8 +240,8 @@ export interface DashboardSummary {
 // ---------------------------------------------------------------------
 // Cấu hình client Supabase
 // ---------------------------------------------------------------------
-const supabaseUrl = (Constants.expoConfig?.extra?.SUPABASE_URL as string | undefined) ?? '';
-const supabaseAnonKey = (Constants.expoConfig?.extra?.SUPABASE_ANON_KEY as string | undefined) ?? '';
+const supabaseUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
@@ -252,9 +252,36 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Web-safe storage that falls back to memory when SecureStore is unavailable
+const secureStorage = {
+  getItem: async (key: string) => {
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      return memoryStorage[key] ?? null;
+    }
+  },
+  setItem: async (key: string, value: string) => {
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch {
+      memoryStorage[key] = value;
+    }
+  },
+  removeItem: async (key: string) => {
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch {
+      delete memoryStorage[key];
+    }
+  },
+};
+
+const memoryStorage: Record<string, string> = {};
+
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: SecureStore,
+    storage: secureStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
