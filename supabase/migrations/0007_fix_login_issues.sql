@@ -1,16 +1,14 @@
 -- =====================================================================
--- FIX DEMO ACCOUNTS AND USER PROFILES
--- Chạy migration này để sửa lỗi đăng nhập
+-- FIX DEMO ACCOUNTS - Version 2
+-- Fix lỗi confirmed_at là generated column
 -- =====================================================================
 
 -- 1. Fix demo owner account
 do $$
 begin
-  -- Cập nhật password cho demo owner
+  -- Cập nhật password cho demo owner (KHÔNG sửa confirmed_at)
   update auth.users
   set encrypted_password = crypt('demo_pass_1', gen_salt('bf')),
-      confirmed_at = now(),
-      email_confirmed_at = now(),
       updated_at = now()
   where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
@@ -52,8 +50,6 @@ begin
   -- Cập nhật password cho demo receiver
   update auth.users
   set encrypted_password = crypt('demo_pass_2', gen_salt('bf')),
-      confirmed_at = now(),
-      email_confirmed_at = now(),
       updated_at = now()
   where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
@@ -71,6 +67,7 @@ begin
 end $$;
 
 -- 3. Tạo profiles cho các user thật đã đăng ký (nếu chưa có)
+-- KHÔNG cố xác nhận email, chỉ tạo profile
 do $$
 declare
   usr record;
@@ -88,7 +85,7 @@ begin
   end loop;
 end $$;
 
--- 4. Verify trigger exists
+-- 4. Đảm bảo trigger tồn tại
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
@@ -100,4 +97,5 @@ begin
   raise notice 'Đã fix demo accounts và tạo profiles cho users';
   raise notice 'Demo Owner: demo.owner@healthy-check.app / demo_pass_1';
   raise notice 'Demo Receiver: demo.receiver@healthy-check.app / demo_pass_2';
+  raise notice 'Lưu ý: Tài khoản thật cần xác nhận email qua link trong mail';
 end $$;
