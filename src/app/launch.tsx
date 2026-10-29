@@ -1,6 +1,6 @@
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 
 /**
  * Màn hình Khởi động và Giới thiệu (Launch Screen) — Mockup #3
@@ -111,6 +111,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.textInverse,
     lineHeight: 40,
+    fontFamily: FONT_FAMILY.bold as string,
   },
   button: {
     width: '100%',
@@ -125,5 +126,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     color: COLORS.textPrimary,
+    fontFamily: FONT_FAMILY.semiBold as string,
   },
 });

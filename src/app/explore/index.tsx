@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase, HealthContent } from '@/lib/supabase';
 import BottomTabBar from '@/components/bottom-tab-bar';
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
   },
-  title: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', color: COLORS.textPrimary },
+  title: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  searchInput: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
+  searchInput: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10, fontFamily: FONT_FAMILY.base as string },
   chipsScroll: { paddingHorizontal: 20, marginBottom: 24 },
   chip: {
     paddingHorizontal: 16,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  chipText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: '500' },
+  chipText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: '500', fontFamily: FONT_FAMILY.medium as string },
   chipTextActive: { color: COLORS.textInverse },
   section: { marginBottom: 24 },
   sectionHeader: {
@@ -282,8 +282,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
-  sectionTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary },
-  articleCount: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  sectionTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
+  articleCount: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   featuredCard: {
     flexDirection: 'row',
     backgroundColor: COLORS.card,
@@ -301,14 +301,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   featuredContent: { flex: 1, marginLeft: 16, justifyContent: 'center' },
-  featuredCategory: { fontSize: FONT_SIZES.xs, color: COLORS.primary, fontWeight: '600', marginBottom: 4 },
-  featuredTitle: { fontSize: FONT_SIZES.base, fontWeight: 'bold', color: COLORS.textPrimary, lineHeight: 22 },
-  featuredExcerpt: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 6, lineHeight: 18 },
+  featuredCategory: { fontSize: FONT_SIZES.xs, color: COLORS.primary, fontWeight: '600', marginBottom: 4, fontFamily: FONT_FAMILY.semiBold as string },
+  featuredTitle: { fontSize: FONT_SIZES.base, fontWeight: 'bold', color: COLORS.textPrimary, lineHeight: 22, fontFamily: FONT_FAMILY.bold as string },
+  featuredExcerpt: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 6, lineHeight: 18, fontFamily: FONT_FAMILY.base as string },
   featuredFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 },
-  featuredTime: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary },
+  featuredTime: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
   loader: { paddingVertical: 40, alignItems: 'center' },
   emptyState: { paddingVertical: 40, alignItems: 'center' },
-  emptyText: { fontSize: FONT_SIZES.base, color: COLORS.textSecondary, marginTop: 12 },
+  emptyText: { fontSize: FONT_SIZES.base, color: COLORS.textSecondary, marginTop: 12, fontFamily: FONT_FAMILY.base as string },
   articleCard: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.lg,
@@ -328,15 +328,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.full,
   },
-  categoryText: { fontSize: FONT_SIZES.xs, fontWeight: '600' },
-  articleTitle: { fontSize: FONT_SIZES.base, fontWeight: 'bold', color: COLORS.textPrimary, lineHeight: 22 },
-  articleExcerpt: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 6, lineHeight: 18 },
+  categoryText: { fontSize: FONT_SIZES.xs, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string },
+  articleTitle: { fontSize: FONT_SIZES.base, fontWeight: 'bold', color: COLORS.textPrimary, lineHeight: 22, fontFamily: FONT_FAMILY.bold as string },
+  articleExcerpt: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 6, lineHeight: 18, fontFamily: FONT_FAMILY.base as string },
   articleFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 12,
   },
-  articleAuthor: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary },
-  articleMeta: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary },
+  articleAuthor: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
+  articleMeta: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
 });
