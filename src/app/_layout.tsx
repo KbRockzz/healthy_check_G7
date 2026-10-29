@@ -10,11 +10,13 @@ import { AuthProvider, useAuth } from '@/lib/hooks/use-auth';
 import { useSplashScreen } from '@/lib/hooks/use-splash-screen';
 import { useDeepLinking } from '@/lib/hooks/use-deep-linking';
 
+// Content component - uses hooks inside AuthProvider
 function LayoutContent() {
   const router = useRouter();
   const { session } = useAuth();
   const { isSplashReady } = useSplashScreen();
   useDeepLinking();
+
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -75,6 +77,7 @@ function LayoutContent() {
   );
 }
 
+// RootLayout just wraps with AuthProvider
 export default function RootLayout() {
   return (
     <AuthProvider>
