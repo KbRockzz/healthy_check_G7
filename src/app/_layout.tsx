@@ -1,39 +1,42 @@
 /**
  * Root layout — Auth-aware navigation
- * - Chưa đăng nhập: Launch → Sign In / Sign Up
- * - Đã đăng nhập: Dashboard (vào thẳng)
- * - Onboarding chỉ hiển thị khi user bấm chỉnh sửa và profile chưa hoàn thiện
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/hooks/use-auth';
 import { useSplashScreen } from '@/lib/hooks/use-splash-screen';
 import { useDeepLinking } from '@/lib/hooks/use-deep-linking';
-import { FontsProvider, useFontsContext } from '@/lib/hooks/use-fonts';
 import { ActivityIndicator, View } from 'react-native';
 import { COLORS } from '@/theme';
+import { Roboto_400Regular, Roboto_700Bold, Roboto_500Medium, Roboto_600SemiBold } from '@expo-google-fonts/roboto';
 
-function AuthWrapper() {
-  const { isSplashReady } = useSplashScreen();
-  const { session, profile } = useAuth();
+export default function RootLayout() {
   const router = useRouter();
+  const { session, profile } = useAuth();
+  const { isSplashReady } = useSplashScreen();
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Handle deep linking for auth callbacks
-  useDeepLinking();
-
-  // Redirect logic - chỉ chuyển hướng khi chưa đăng nhập
   useEffect(() => {
-    if (!isSplashReady) return;
+    // Load fonts when available
+    const timer = setTimeout(() => {
+      setFontsLoaded(true);
+      setLoading(false);
+    }, 1000); // Fallback timeout
 
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Redirect logic
+  useEffect(() => {
+    if (!isSplashReady || !fontsLoaded || loading) return;
     if (!session) {
-      // Chưa đăng nhập
       router.replace('/launch');
     }
-    // Đã đăng nhập thì để vào dashboard mặc định (không强制 onboarding)
-  }, [session, isSplashReady]);
+  }, [session, isSplashReady, fontsLoaded, loading]);
 
-  if (!isSplashReady) {
+  if (loading || !fontsLoaded || !isSplashReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -42,7 +45,7 @@ function AuthWrapper() {
   }
 
   return (
-    <>
+    <AuthProvider>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -71,24 +74,6 @@ function AuthWrapper() {
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
         <Stack.Screen name="settings/goals" options={{ title: 'Goals' }} />
       </Stack>
-    </>
-  );
-}
-
-function AppWrapper() {
-  const { fontsLoaded } = useFontsContext();
-  if (!fontsLoaded) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg }}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-  return (
-    <AuthProvider>
-      <AuthWrapper />
     </AuthProvider>
   );
 }
-
-export default AppWrapper;
