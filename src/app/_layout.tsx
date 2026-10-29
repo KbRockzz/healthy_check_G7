@@ -4,37 +4,34 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { ActivityIndicator, View } from 'react-native';
+import { COLORS } from '@/theme';
 import { AuthProvider, useAuth } from '@/lib/hooks/use-auth';
 import { useSplashScreen } from '@/lib/hooks/use-splash-screen';
 import { useDeepLinking } from '@/lib/hooks/use-deep-linking';
-import { ActivityIndicator, View } from 'react-native';
-import { COLORS } from '@/theme';
-import { Roboto_400Regular, Roboto_700Bold, Roboto_500Medium, Roboto_600SemiBold } from '@expo-google-fonts/roboto';
 
-export default function RootLayout() {
+function LayoutContent() {
   const router = useRouter();
-  const { session, profile } = useAuth();
+  const { session } = useAuth();
   const { isSplashReady } = useSplashScreen();
+  useDeepLinking();
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load fonts when available
     const timer = setTimeout(() => {
       setFontsLoaded(true);
       setLoading(false);
-    }, 1000); // Fallback timeout
-
+    }, 500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Redirect logic
   useEffect(() => {
     if (!isSplashReady || !fontsLoaded || loading) return;
     if (!session) {
       router.replace('/launch');
     }
-  }, [session, isSplashReady, fontsLoaded, loading]);
+  }, [session, isSplashReady, fontsLoaded, loading, router]);
 
   if (loading || !fontsLoaded || !isSplashReady) {
     return (
@@ -45,7 +42,7 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
+    <>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -74,6 +71,14 @@ export default function RootLayout() {
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
         <Stack.Screen name="settings/goals" options={{ title: 'Goals' }} />
       </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <LayoutContent />
     </AuthProvider>
   );
 }
