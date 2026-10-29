@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import BottomTabBar from '@/components/bottom-tab-bar';
@@ -88,7 +88,9 @@ export default function HomeScreen() {
       return;
     }
     const name = session.user.user_metadata?.full_name || profile?.full_name || 'User';
-    setUserName(name.split(' ')[0]);
+    // Tên tiếng Việt thường có họ ở đầu, tên riêng ở cuối → lấy phần tử cuối cùng
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    setUserName(parts.length > 0 ? parts[parts.length - 1] : name);
     fetchData();
   }, [session]);
 
@@ -267,8 +269,8 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
   },
-  greeting: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  name: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', color: COLORS.textPrimary },
+  greeting: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
+  name: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
   avatar: {
     width: 48,
     height: 48,
@@ -289,13 +291,14 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   quickStatItem: { flex: 1, alignItems: 'center' },
-  quickStatValue: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 4 },
-  quickStatLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2 },
+  quickStatValue: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 4, fontFamily: FONT_FAMILY.bold as string },
+  quickStatLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2, fontFamily: FONT_FAMILY.base as string },
   quickStatDivider: { width: 1, backgroundColor: COLORS.border, marginHorizontal: 12 },
   sectionTitle: {
     fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
     color: COLORS.textPrimary,
+    fontFamily: FONT_FAMILY.bold as string,
     paddingHorizontal: 20,
     marginTop: 24,
     marginBottom: 16,
@@ -322,8 +325,8 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   cardText: { flex: 1 },
-  cardTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
-  cardSubtitle: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2 },
+  cardTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.semiBold as string },
+  cardSubtitle: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2, fontFamily: FONT_FAMILY.base as string },
   signOutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -336,5 +339,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.danger + '30',
   },
-  signOutText: { fontSize: FONT_SIZES.base, color: COLORS.danger, fontWeight: '600', marginLeft: 8 },
+  signOutText: { fontSize: FONT_SIZES.base, color: COLORS.danger, fontWeight: '600', marginLeft: 8, fontFamily: FONT_FAMILY.semiBold as string },
 });

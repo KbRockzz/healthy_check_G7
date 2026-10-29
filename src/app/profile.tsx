@@ -9,7 +9,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 
@@ -511,8 +511,8 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
   },
-  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
-  saveBtn: { fontSize: FONT_SIZES.base, color: COLORS.primary, fontWeight: '600' },
+  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
+  saveBtn: { fontSize: FONT_SIZES.base, color: COLORS.danger, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string },
   saveBtnDisabled: { opacity: 0.5 },
   avatarSection: {
     alignItems: 'center',
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: COLORS.primary,
   },
-  email: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 8 },
+  email: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 8, fontFamily: FONT_FAMILY.base as string },
   section: {
     paddingHorizontal: 20,
     marginBottom: 24,
@@ -544,6 +544,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 12,
+    fontFamily: FONT_FAMILY.semiBold as string,
   },
   infoRow: {
     flexDirection: 'row',
@@ -558,10 +559,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
     color: COLORS.textTertiary,
     marginBottom: 2,
+    fontFamily: FONT_FAMILY.base as string,
   },
   infoValue: {
     fontSize: FONT_SIZES.base,
     color: COLORS.textPrimary,
+    fontFamily: FONT_FAMILY.base as string,
   },
   inputGroup: {
     marginBottom: 16,
@@ -570,6 +573,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     marginBottom: 6,
+    fontFamily: FONT_FAMILY.base as string,
   },
   inputRow: {
     flexDirection: 'row',
@@ -583,6 +587,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FONT_SIZES.base,
     color: COLORS.textPrimary,
+    fontFamily: FONT_FAMILY.base as string,
     marginLeft: 10,
   },
   row: {
@@ -610,10 +615,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     marginTop: 8,
+    fontFamily: FONT_FAMILY.base as string,
   },
   genderLabelActive: {
     color: COLORS.primary,
     fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold as string,
   },
   settingRow: {
     flexDirection: 'row',
@@ -631,10 +638,12 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: FONT_SIZES.base,
     color: COLORS.textPrimary,
+    fontFamily: FONT_FAMILY.base as string,
   },
   settingValue: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.base as string,
   },
   signOutBtn: {
     flexDirection: 'row',
@@ -648,5 +657,5 @@ const styles = StyleSheet.create({
     borderColor: COLORS.danger + '30',
     marginTop: 20,
   },
-  signOutText: { fontSize: FONT_SIZES.base, color: COLORS.danger, fontWeight: '600', marginLeft: 8 },
+  signOutText: { fontSize: FONT_SIZES.base, color: COLORS.danger, fontWeight: '600', marginLeft: 8, fontFamily: FONT_FAMILY.semiBold as string },
 });

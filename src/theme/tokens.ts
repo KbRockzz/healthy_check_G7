@@ -40,7 +40,14 @@ export const FONT_SIZES = {
   '4xl': 36,
 } as const;
 
-// Border radius
+export const FONT_FAMILY = {
+  /** Roboto — font mặc định toàn app */
+  base: 'Roboto-Regular',
+  bold: 'Roboto-Bold',
+  medium: 'Roboto-Medium',
+  semiBold: 'Roboto-SemiBold',
+  light: 'Roboto-Light',
+} as const;
 export const BORDER_RADIUS = {
   none: 0,
   sm: 8,

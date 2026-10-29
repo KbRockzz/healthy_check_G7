@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 
@@ -319,6 +319,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.textPrimary,
     marginTop: 16,
+    fontFamily: FONT_FAMILY.bold as string,
   },
   subtitle: {
     fontSize: FONT_SIZES.sm,
@@ -326,6 +327,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 20,
+    fontFamily: FONT_FAMILY.base as string,
   },
   section: {
     backgroundColor: COLORS.card,
@@ -339,6 +341,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textPrimary,
     marginBottom: 12,
+    fontFamily: FONT_FAMILY.semiBold as string,
   },
   inputGroup: {
     marginBottom: 16,
@@ -347,6 +350,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     marginBottom: 6,
+    fontFamily: FONT_FAMILY.base as string,
   },
   input: {
     backgroundColor: COLORS.surface,
@@ -355,6 +359,7 @@ const styles = StyleSheet.create({
     height: 48,
     fontSize: FONT_SIZES.base,
     color: COLORS.textPrimary,
+    fontFamily: FONT_FAMILY.base as string,
   },
   inputRow: {
     flexDirection: 'row',
@@ -370,6 +375,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.base,
     color: COLORS.textPrimary,
     marginLeft: 10,
+    fontFamily: FONT_FAMILY.base as string,
   },
   genderGrid: {
     flexDirection: 'row',
@@ -392,10 +398,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     marginTop: 8,
+    fontFamily: FONT_FAMILY.base as string,
   },
   genderLabelActive: {
     color: COLORS.primary,
     fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold as string,
   },
   row: {
     flexDirection: 'row',
@@ -405,6 +413,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     width: 100,
+    fontFamily: FONT_FAMILY.base as string,
   },
   goalInput: {
     flex: 1,
@@ -419,11 +428,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FONT_SIZES.base,
     color: COLORS.textPrimary,
+    fontFamily: FONT_FAMILY.base as string,
   },
   goalSuffix: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textTertiary,
     marginLeft: 8,
+    fontFamily: FONT_FAMILY.base as string,
   },
   buttonGroup: {
     marginTop: 20,
@@ -439,6 +450,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.base,
     fontWeight: '600',
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold as string,
   },
   saveBtn: {
     backgroundColor: COLORS.primary,
@@ -452,5 +464,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.base,
     fontWeight: '600',
     color: COLORS.textInverse,
+    fontFamily: FONT_FAMILY.semiBold as string,
   },
 });

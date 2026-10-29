@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/hooks/use-auth';
 import { useSplashScreen } from '@/lib/hooks/use-splash-screen';
 import { useDeepLinking } from '@/lib/hooks/use-deep-linking';
+import { FontsProvider } from '@/lib/hooks/use-fonts';
 import { ActivityIndicator, View } from 'react-native';
 import { COLORS } from '@/theme';
 
@@ -74,10 +75,14 @@ function AuthWrapper() {
   );
 }
 
-export default function RootLayout() {
+function AppWrapper() {
   return (
-    <AuthProvider>
-      <AuthWrapper />
-    </AuthProvider>
+    <FontsProvider>
+      <AuthProvider>
+        <AuthWrapper />
+      </AuthProvider>
+    </FontsProvider>
   );
 }
+
+export default AppWrapper;

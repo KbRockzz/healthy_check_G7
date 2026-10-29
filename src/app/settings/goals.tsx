@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     marginBottom: 20,
   },
-  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
+  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
   banner: {
     backgroundColor: COLORS.primary + '15',
     borderRadius: BORDER_RADIUS.lg,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 24,
   },
-  bannerText: { flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, lineHeight: 20 },
+  bannerText: { flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, lineHeight: 20, fontFamily: FONT_FAMILY.base as string },
   section: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.lg,
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 12,
   },
-  sectionTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
+  sectionTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.semiBold as string },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -312,16 +312,19 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FONT_SIZES.base,
     color: COLORS.textPrimary,
+    fontFamily: FONT_FAMILY.base as string,
   },
   inputSuffix: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textTertiary,
+    fontFamily: FONT_FAMILY.base as string,
     marginLeft: 8,
   },
   timeLabel: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     width: 90,
+    fontFamily: FONT_FAMILY.base as string,
   },
   timeDisplay: {
     flex: 1,
@@ -329,6 +332,7 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginLeft: 10,
     fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium as string,
   },
   saveBtn: {
     backgroundColor: COLORS.primary,
