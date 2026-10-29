@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { supabase, HealthContent } from '@/lib/supabase';
 import { useAuth } from '@/lib/hooks/use-auth';
 
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     marginBottom: 20,
   },
-  headerTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold' },
+  headerTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
   categoryBadge: {
     alignSelf: 'flex-start',
     backgroundColor: COLORS.primary + '15',
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   categoryText: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: '600' },
-  title: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', color: COLORS.textPrimary, lineHeight: 36 },
+  title: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, color: COLORS.textPrimary, lineHeight: 36 },
   metaRow: {
     flexDirection: 'row',
     gap: 16,
@@ -207,15 +207,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  metaText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  metaText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   excerptBox: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
     padding: 16,
     marginBottom: 20,
   },
-  excerpt: { fontSize: FONT_SIZES.base, color: COLORS.textSecondary, lineHeight: 24 },
-  body: { fontSize: FONT_SIZES.base, color: COLORS.textPrimary, lineHeight: 26 },
+  excerpt: { fontSize: FONT_SIZES.base, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, lineHeight: 24 },
+  body: { fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string, lineHeight: 26 },
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.full,
   },
-  tagText: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary },
+  tagText: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   voteBtn: {
     flexDirection: 'row',
     alignItems: 'center',

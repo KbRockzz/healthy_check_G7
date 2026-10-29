@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     marginBottom: 20,
   },
-  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
+  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
   summaryCard: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.xl,
@@ -339,10 +339,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   calorieValue: { fontSize: 36, fontWeight: 'bold', color: COLORS.primary },
-  calorieLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  calorieLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   calorieInfo: { marginTop: 16, alignItems: 'center' },
-  calorieGoal: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  calorieRemaining: { fontSize: FONT_SIZES.base, fontWeight: '600', marginTop: 4 },
+  calorieGoal: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
+  calorieRemaining: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, marginTop: 4 },
   progressBar: {
     width: '100%',
     height: 6,
@@ -359,11 +359,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     ...SHADOWS.sm,
   },
-  macroTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', marginBottom: 12 },
+  macroTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, marginBottom: 12 },
   macroRow: { flexDirection: 'row', justifyContent: 'space-around' },
   macroItem: { alignItems: 'center' },
-  macroValue: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary },
-  macroLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 4 },
+  macroValue: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, color: COLORS.textPrimary },
+  macroLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 4 },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     ...SHADOWS.sm,
   },
-  formTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 16 },
+  formTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 16 },
   mealTypeRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   mealTypeBtn: {
     flex: 1,
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   mealTypeBtnActive: { backgroundColor: COLORS.primary },
-  mealTypeText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  mealTypeText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   mealTypeTextActive: { color: COLORS.textInverse, fontWeight: '600' },
   inputRow: {
     flexDirection: 'row',
@@ -403,10 +403,10 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: 12,
   },
-  input: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
+  input: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string, marginLeft: 10 },
   rowInputs: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   inputSmall: { flex: 1 },
-  inputLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginBottom: 4 },
+  inputLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginBottom: 4 },
   smallInput: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   },
   submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base },
   entriesSection: { marginTop: 20 },
-  entriesTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 12 },
+  entriesTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 12 },
   entryItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -441,9 +441,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.sm,
   },
   mealBadgeText: { fontSize: FONT_SIZES.xs, fontWeight: '600' },
-  entryName: { fontSize: FONT_SIZES.base, color: COLORS.textPrimary },
-  entryCalories: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.primary },
+  entryName: { fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string },
+  entryCalories: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.primary },
   emptyState: { alignItems: 'center', paddingVertical: 30 },
   emptyText: { fontSize: FONT_SIZES.lg, fontWeight: '600', color: COLORS.textPrimary, marginTop: 12 },
-  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 4 },
+  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 4 },
 });

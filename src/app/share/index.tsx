@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase, SharingGrant } from '@/lib/supabase';
 
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
   },
-  title: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold' },
+  title: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
   infoCard: {
     flexDirection: 'row',
     backgroundColor: COLORS.card,
@@ -305,8 +305,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   infoContent: { flex: 1 },
-  infoTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
-  infoDesc: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 4, lineHeight: 20 },
+  infoTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textPrimary },
+  infoDesc: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 4, lineHeight: 20 },
   formSection: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.xl,
@@ -315,9 +315,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     ...SHADOWS.sm,
   },
-  formTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 16 },
+  formTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 16 },
   inputGroup: { marginBottom: 16 },
-  label: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 6 },
+  label: { fontSize: FONT_SIZES.sm, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textSecondary, marginBottom: 6 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
   },
-  input: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
+  input: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string, marginLeft: 10 },
   scopesSection: { marginBottom: 16 },
   scopesRow: {
     flexDirection: 'row',
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   createBtnDisabled: { opacity: 0.7 },
   createBtnText: { color: COLORS.textInverse, fontWeight: '600', marginLeft: 8, fontSize: FONT_SIZES.base },
   listSection: { marginTop: 24, paddingHorizontal: 20 },
-  listTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 12 },
+  listTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 12 },
   grantItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -377,8 +377,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   grantDetails: { flex: 1 },
-  grantName: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
-  grantEmail: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary },
+  grantName: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textPrimary },
+  grantEmail: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   grantActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   statusBadge: {
     paddingHorizontal: 8,
@@ -388,6 +388,6 @@ const styles = StyleSheet.create({
   statusText: { fontSize: FONT_SIZES.xs, fontWeight: '600' },
   loader: { paddingVertical: 20, alignItems: 'center' },
   emptyState: { alignItems: 'center', paddingVertical: 30 },
-  emptyText: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary, marginTop: 12 },
-  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 4 },
+  emptyText: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textPrimary, marginTop: 12 },
+  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 4 },
 });

@@ -10,7 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/hooks/use-auth';
 import { useSplashScreen } from '@/lib/hooks/use-splash-screen';
 import { useDeepLinking } from '@/lib/hooks/use-deep-linking';
-import { FontsProvider } from '@/lib/hooks/use-fonts';
+import { FontsProvider, useFontsContext } from '@/lib/hooks/use-fonts';
 import { ActivityIndicator, View } from 'react-native';
 import { COLORS } from '@/theme';
 
@@ -76,12 +76,18 @@ function AuthWrapper() {
 }
 
 function AppWrapper() {
+  const { fontsLoaded } = useFontsContext();
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
   return (
-    <FontsProvider>
-      <AuthProvider>
-        <AuthWrapper />
-      </AuthProvider>
-    </FontsProvider>
+    <AuthProvider>
+      <AuthWrapper />
+    </AuthProvider>
   );
 }
 

@@ -9,7 +9,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     marginBottom: 20,
   },
-  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
+  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
   summaryCard: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.xl,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sleepValue: { fontSize: 28, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 8 },
-  sleepLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  sleepLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   statusText: { fontSize: FONT_SIZES.lg, fontWeight: '600', marginTop: 12 },
   progressBar: {
     width: '80%',
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressFill: { height: '100%', borderRadius: 3 },
-  goalText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 8 },
+  goalText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 8 },
   scheduleCard: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.lg,
@@ -398,11 +398,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     ...SHADOWS.sm,
   },
-  scheduleTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', marginBottom: 12 },
+  scheduleTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, marginBottom: 12 },
   scheduleRow: { flexDirection: 'row', justifyContent: 'space-around' },
   scheduleItem: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  scheduleLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  scheduleValue: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary },
+  scheduleLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
+  scheduleValue: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, color: COLORS.textPrimary },
   logBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     ...SHADOWS.sm,
   },
-  formTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 16 },
+  formTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 16 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: 12,
   },
-  inputValue: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
+  inputValue: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string, marginLeft: 10 },
   submitBtn: {
     backgroundColor: COLORS.success,
     paddingVertical: 14,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   historySection: { marginTop: 20 },
-  historyTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 12 },
+  historyTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 12 },
   historyItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -459,12 +459,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     ...SHADOWS.sm,
   },
-  historyDate: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  historyTime: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary, marginTop: 2 },
+  historyDate: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
+  historyTime: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string, marginTop: 2 },
   historyStats: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  historyValue: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
-  historyQuality: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary },
+  historyValue: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textPrimary },
+  historyQuality: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
   emptyState: { alignItems: 'center', paddingVertical: 30 },
   emptyText: { fontSize: FONT_SIZES.lg, fontWeight: '600', color: COLORS.textPrimary, marginTop: 12 },
-  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 4 },
+  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 4 },
 });

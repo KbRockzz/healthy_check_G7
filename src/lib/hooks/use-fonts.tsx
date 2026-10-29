@@ -1,33 +1,32 @@
 /**
- * Font Provider — Load Roboto từ assets/fonts, áp dụng làm font mặc định toàn app
+ * Font Provider — Load Roboto từ @expo-google-fonts/roboto
+ * Áp dụng làm font mặc định toàn app
  */
 import { useState, useEffect, createContext, useContext } from 'react';
-import * as Font from 'expo-font';
-
-const ROBOTO_FAMILIES = ['Roboto-Regular', 'Roboto-Bold', 'Roboto-Medium', 'Roboto-SemiBold', 'Roboto-Light'];
+import { useFonts } from '@expo-google-fonts/roboto/useFonts';
+import {
+  Roboto_400Regular,
+  Roboto_700Bold,
+  Roboto_500Medium,
+  Roboto_600SemiBold,
+  Roboto_300Light,
+} from '@expo-google-fonts/roboto';
 
 interface FontsContextType {
   fontsLoaded: boolean;
 }
 
 const FontsContext = createContext<FontsContextType>({ fontsLoaded: false });
-export function useFonts() { return useContext(FontsContext); }
+export function useFontsContext() { return useContext(FontsContext); }
 
 export function FontsProvider({ children }: { children: React.ReactNode }) {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
-
-  useEffect(() => {
-    async function load() {
-      await Font.loadAsync({
-        'Roboto-Regular':  require('../../../assets/fonts/Roboto-Regular.ttf'),
-        'Roboto-Bold':    require('../../../assets/fonts/Roboto-Bold.ttf'),
-        'Roboto-Medium':  require('../../../assets/fonts/Roboto-Medium.ttf'),
-        'Roboto-SemiBold': require('../../../assets/fonts/Roboto-SemiBold.ttf'),
-        'Roboto-Light':   require('../../../assets/fonts/Roboto-Light.ttf'),
-      }).finally(() => setFontsLoaded(true));
-    }
-    load();
-  }, []);
+  const [fontsLoaded] = useFonts({
+    Roboto_400Regular,
+    Roboto_700Bold,
+    Roboto_500Medium,
+    Roboto_600SemiBold,
+    Roboto_300Light,
+  });
 
   return (
     <FontsContext.Provider value={{ fontsLoaded }}>

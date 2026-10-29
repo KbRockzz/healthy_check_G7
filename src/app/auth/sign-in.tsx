@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 
 export default function SignInScreen() {
@@ -115,20 +115,20 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, backgroundColor: COLORS.bg },
   container: { flex: 1, paddingHorizontal: 24, paddingTop: 80, paddingBottom: 40, justifyContent: 'space-between' },
   header: { marginBottom: 40 },
-  title: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', color: COLORS.textPrimary },
-  subtitle: { fontSize: FONT_SIZES.base, color: COLORS.textSecondary, marginTop: 8 },
+  title: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, color: COLORS.textPrimary },
+  subtitle: { fontSize: FONT_SIZES.base, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 8 },
   form: { marginBottom: 30 },
   inputGroup: { marginBottom: 20 },
-  label: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8 },
+  label: { fontSize: FONT_SIZES.sm, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textPrimary, marginBottom: 8 },
   inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.md, paddingHorizontal: 16, height: 52 },
-  input: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary },
+  input: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string },
   eyeIcon: { padding: 8 },
   forgotPassword: { alignSelf: 'flex-end', marginBottom: 24 },
   forgotPasswordText: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: '500' },
   button: { backgroundColor: COLORS.primary, height: 52, borderRadius: BORDER_RADIUS.full, alignItems: 'center', justifyContent: 'center', ...SHADOWS.md },
   buttonDisabled: { opacity: 0.7 },
-  buttonText: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textInverse },
+  buttonText: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textInverse },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  footerText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  footerText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   signUpLink: { fontSize: FONT_SIZES.sm, fontWeight: 'bold', color: COLORS.primary },
 });

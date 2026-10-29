@@ -9,7 +9,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     marginBottom: 20,
   },
-  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
+  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
   overviewCard: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.xl,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cycleDay: { fontSize: 24, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 8 },
-  cycleSub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  cycleSub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   infoCard: {
     backgroundColor: COLORS.accent + '15',
     borderRadius: BORDER_RADIUS.md,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     ...SHADOWS.sm,
   },
-  sectionTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 16 },
+  sectionTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 16 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -349,10 +349,10 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: 16,
   },
-  dateDisplay: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, marginLeft: 10 },
+  dateDisplay: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string, marginLeft: 10 },
   symptomSection: { marginBottom: 20 },
   moodSection: { marginBottom: 20 },
-  subTitle: { fontSize: FONT_SIZES.sm, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 10 },
+  subTitle: { fontSize: FONT_SIZES.sm, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textSecondary, marginBottom: 10 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   symptomBtn: {
     flexDirection: 'row',
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   symptomBtnActive: { backgroundColor: COLORS.accent + '20' },
-  symptomText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  symptomText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   symptomTextActive: { color: COLORS.accent, fontWeight: '600' },
   moodBtn: {
     flexDirection: 'row',
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   moodBtnActive: { backgroundColor: COLORS.primary + '20' },
-  moodText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  moodText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   moodTextActive: { color: COLORS.primary, fontWeight: '600' },
   submitBtn: {
     backgroundColor: COLORS.accent,
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   historySection: { marginTop: 20 },
-  historyTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 12 },
+  historyTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 12 },
   historyItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -406,8 +406,8 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   historyLeft: { flex: 1 },
-  historyDate: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
-  historySymptom: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 4 },
+  historyDate: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textPrimary },
+  historySymptom: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 4 },
   cycleLengthBadge: {
     backgroundColor: COLORS.primary + '15',
     paddingHorizontal: 10,
@@ -417,5 +417,5 @@ const styles = StyleSheet.create({
   cycleLengthText: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: '600' },
   emptyState: { alignItems: 'center', paddingVertical: 30 },
   emptyText: { fontSize: FONT_SIZES.lg, fontWeight: '600', color: COLORS.textPrimary, marginTop: 12 },
-  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 4 },
+  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 4 },
 });

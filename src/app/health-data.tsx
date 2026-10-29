@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase, HealthMetric, Profile } from '@/lib/supabase';
 
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     marginBottom: 20,
   },
-  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
+  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
   profileCard: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.xl,
@@ -241,8 +241,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   profileInfo: { marginLeft: 12 },
-  profileName: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary },
-  profileBio: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 2 },
+  profileName: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
+  profileBio: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 2, fontFamily: FONT_FAMILY.base as string },
   profileStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -251,8 +251,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   profileStat: { alignItems: 'center' },
-  profileStatValue: { fontSize: FONT_SIZES.base, fontWeight: 'bold', color: COLORS.textPrimary },
-  profileStatLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2 },
+  profileStatValue: { fontSize: FONT_SIZES.base, fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
+  profileStatLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2, fontFamily: FONT_FAMILY.base as string },
   section: { marginBottom: 20 },
   sectionTitle: {
     fontSize: FONT_SIZES.sm,
@@ -261,6 +261,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 10,
+    fontFamily: FONT_FAMILY.semiBold as string,
   },
   card: {
     backgroundColor: COLORS.card,
@@ -286,9 +287,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  rowLabel: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary },
-  rowValue: { fontSize: FONT_SIZES.base, fontWeight: 'bold', color: COLORS.textPrimary },
+  rowLabel: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string },
+  rowValue: { fontSize: FONT_SIZES.base, fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
   emptyState: { paddingVertical: 30, alignItems: 'center' },
-  emptyText: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary, marginTop: 12 },
-  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center' },
+  emptyText: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary, marginTop: 12, fontFamily: FONT_FAMILY.semiBold as string },
+  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center', fontFamily: FONT_FAMILY.base as string },
 });

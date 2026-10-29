@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
+import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     marginBottom: 20,
   },
-  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
+  headerTitle: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
   progressSection: {
     alignItems: 'center',
     paddingVertical: 30,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepsCount: { fontSize: FONT_SIZES['4xl'], fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 8 },
-  stepsLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  stepsLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   statusText: { fontSize: FONT_SIZES.lg, fontWeight: '600', marginTop: 12 },
   progressBar: {
     width: '80%',
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressFill: { height: '100%', borderRadius: 4 },
-  goalText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 8 },
+  goalText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 8 },
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   statValue: { fontSize: FONT_SIZES.base, fontWeight: 'bold', marginTop: 8, color: COLORS.textPrimary },
-  statLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 4 },
+  statLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 4 },
   logSection: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.lg,
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...SHADOWS.sm,
   },
-  logTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', marginBottom: 12, color: COLORS.textPrimary },
+  logTitle: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, marginBottom: 12, color: COLORS.textPrimary },
   logInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     padding: 16,
     ...SHADOWS.sm,
   },
-  historyTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', marginBottom: 12, color: COLORS.textPrimary },
+  historyTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 12, color: COLORS.textPrimary },
   historyList: { gap: 12 },
   historyItem: {
     flexDirection: 'row',
@@ -322,12 +322,12 @@ const styles = StyleSheet.create({
     gap: 6,
     flex: 1,
   },
-  historyValue: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.textPrimary },
-  historySub: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary },
+  historyValue: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textPrimary },
+  historySub: { fontSize: FONT_SIZES.xs, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 30,
   },
   emptyText: { fontSize: FONT_SIZES.lg, fontWeight: '600', color: COLORS.textPrimary, marginTop: 12 },
-  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 4 },
+  emptySub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string, marginTop: 4 },
 });

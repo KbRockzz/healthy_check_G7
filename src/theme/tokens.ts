@@ -42,11 +42,11 @@ export const FONT_SIZES = {
 
 export const FONT_FAMILY = {
   /** Roboto — font mặc định toàn app */
-  base: 'Roboto-Regular',
-  bold: 'Roboto-Bold',
-  medium: 'Roboto-Medium',
-  semiBold: 'Roboto-SemiBold',
-  light: 'Roboto-Light',
+  base: 'Roboto_400Regular',
+  bold: 'Roboto_700Bold',
+  medium: 'Roboto_500Medium',
+  semiBold: 'Roboto_600SemiBold',
+  light: 'Roboto_300Light',
 } as const;
 export const BORDER_RADIUS = {
   none: 0,
