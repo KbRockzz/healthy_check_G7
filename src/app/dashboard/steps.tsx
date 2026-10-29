@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.full,
   },
-  logBtnText: { color: COLORS.textInverse, fontWeight: '600' },
+  logBtnText: { color: COLORS.textInverse, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string },
   historySection: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.lg,

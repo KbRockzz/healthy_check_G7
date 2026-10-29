@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     ...SHADOWS.md,
   },
-  addBtnText: { color: COLORS.textInverse, fontWeight: '600', marginLeft: 8, fontSize: FONT_SIZES.base },
+  addBtnText: { color: COLORS.textInverse, fontWeight: '600', marginLeft: 8, fontSize: FONT_SIZES.base, fontFamily: FONT_FAMILY.semiBold as string },
   formCard: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.lg,
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   mealTypeBtnActive: { backgroundColor: COLORS.primary },
   mealTypeText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
-  mealTypeTextActive: { color: COLORS.textInverse, fontWeight: '600' },
+  mealTypeTextActive: { color: COLORS.textInverse, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full,
     alignItems: 'center',
   },
-  submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base },
+  submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base, fontFamily: FONT_FAMILY.semiBold as string },
   entriesSection: { marginTop: 20 },
   entriesTitle: { fontSize: FONT_SIZES.lg, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, marginBottom: 12 },
   entryItem: {
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.sm,
   },
-  mealBadgeText: { fontSize: FONT_SIZES.xs, fontWeight: '600' },
+  mealBadgeText: { fontSize: FONT_SIZES.xs, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string },
   entryName: { fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string },
   entryCalories: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.primary },
   emptyState: { alignItems: 'center', paddingVertical: 30 },

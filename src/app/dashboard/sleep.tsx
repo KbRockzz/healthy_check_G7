@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     ...SHADOWS.md,
   },
-  logBtnText: { color: COLORS.textInverse, fontWeight: '600', marginLeft: 8, fontSize: FONT_SIZES.base },
+  logBtnText: { color: COLORS.textInverse, fontWeight: '600', marginLeft: 8, fontSize: FONT_SIZES.base, fontFamily: FONT_FAMILY.semiBold as string },
   formCard: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.lg,
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base },
+  submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base, fontFamily: FONT_FAMILY.semiBold as string },
   picker: {
     width: '100%',
     height: 200,

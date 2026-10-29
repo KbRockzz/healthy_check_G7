@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base },
+  submitBtnText: { color: COLORS.textInverse, fontWeight: '600', fontSize: FONT_SIZES.base, fontFamily: FONT_FAMILY.semiBold as string },
   picker: {
     width: '100%',
     height: 200,
