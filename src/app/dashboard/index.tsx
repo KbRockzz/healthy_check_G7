@@ -76,6 +76,9 @@ export default function HomeScreen() {
   const router = useRouter();
   const { session, profile, signOut, loading: authLoading } = useAuth();
   const [todaySteps, setTodaySteps] = useState<number | null>(null);
+  const [todayCalories, setTodayCalories] = useState(0);
+  const [todayWater, setTodayWater] = useState(0);
+  const [todaySleep, setTodaySleep] = useState(0);
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
@@ -85,20 +88,51 @@ export default function HomeScreen() {
     }
     const name = session.user.user_metadata?.full_name || profile?.full_name || 'User';
     setUserName(name.split(' ')[0]);
+    fetchData();
+  }, [session]);
+
+  async function fetchData() {
+    if (!session) return;
+    const today = new Date().toISOString().split('T')[0];
 
     // Fetch today's steps
-    const fetchSteps = async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const { data } = await supabase
-        .from('step_records')
-        .select('steps')
-        .eq('user_id', session.user.id)
-        .eq('recorded_on', today)
-        .single();
-      if (data) setTodaySteps(data.steps);
-    };
-    fetchSteps();
-  }, [session]);
+    const { data: stepsData } = await supabase
+      .from('step_records')
+      .select('steps')
+      .eq('user_id', session.user.id)
+      .eq('recorded_on', today)
+      .single();
+    if (stepsData) setTodaySteps(stepsData.steps);
+
+    // Fetch today's calories
+    const { data: nutritionData } = await supabase
+      .from('nutrition_logs')
+      .select('calories')
+      .eq('user_id', session.user.id)
+      .eq('logged_on', today);
+    const totalCal = nutritionData?.reduce((s, i) => s + i.calories, 0) || 0;
+    setTodayCalories(totalCal);
+
+    // Fetch today's water
+    const { data: waterData } = await supabase
+      .from('health_metrics')
+      .select('value')
+      .eq('user_id', session.user.id)
+      .eq('metric_kind', 'water_intake')
+      .gte('recorded_at', new Date(today + 'T00:00:00Z').toISOString())
+      .lt('recorded_at', new Date(today + 'T23:59:59Z').toISOString());
+    const totalWater = waterData?.reduce((s, i) => s + i.value, 0) || 0;
+    setTodayWater(totalWater);
+
+    // Fetch today's sleep
+    const { data: sleepData } = await supabase
+      .from('sleep_records')
+      .select('total_minutes')
+      .eq('user_id', session.user.id)
+      .eq('sleep_date', today)
+      .single();
+    if (sleepData) setTodaySleep(sleepData.total_minutes);
+  }
 
   const handleSignOut = async () => {
     await signOut();
@@ -139,24 +173,24 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Today's Steps Quick Stats */}
+        {/* Today's Quick Stats */}
         <View style={styles.quickStats}>
           <View style={styles.quickStatItem}>
             <Ionicons name="walk" size={28} color={COLORS.primary} />
             <Text style={styles.quickStatValue}>{todaySteps?.toLocaleString() ?? '-'}</Text>
-            <Text style={styles.quickStatLabel}>Steps</Text>
+            <Text style={styles.quickStatLabel}>Bước</Text>
           </View>
           <View style={styles.quickStatDivider} />
           <View style={styles.quickStatItem}>
             <Ionicons name="flame" size={28} color={COLORS.warning} />
-            <Text style={styles.quickStatValue}>850</Text>
-            <Text style={styles.quickStatLabel}>Calories</Text>
+            <Text style={styles.quickStatValue}>{todayCalories}</Text>
+            <Text style={styles.quickStatLabel}>Calo</Text>
           </View>
           <View style={styles.quickStatDivider} />
           <View style={styles.quickStatItem}>
             <Ionicons name="water" size={28} color="#3B82F6" />
-            <Text style={styles.quickStatValue}>2.1L</Text>
-            <Text style={styles.quickStatLabel}>Water</Text>
+            <Text style={styles.quickStatValue}>{todayWater}</Text>
+            <Text style={styles.quickStatLabel}>Nước (ml)</Text>
           </View>
         </View>
 
