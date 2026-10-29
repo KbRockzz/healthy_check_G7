@@ -19,11 +19,11 @@ export function FontsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function load() {
       await Font.loadAsync({
-        'Roboto-Regular':  require('../../assets/fonts/Roboto-Regular.ttf'),
-        'Roboto-Bold':    require('../../assets/fonts/Roboto-Bold.ttf'),
-        'Roboto-Medium':  require('../../assets/fonts/Roboto-Medium.ttf'),
-        'Roboto-SemiBold': require('../../assets/fonts/Roboto-SemiBold.ttf'),
-        'Roboto-Light':   require('../../assets/fonts/Roboto-Light.ttf'),
+        'Roboto-Regular':  require('../../../assets/fonts/Roboto-Regular.ttf'),
+        'Roboto-Bold':    require('../../../assets/fonts/Roboto-Bold.ttf'),
+        'Roboto-Medium':  require('../../../assets/fonts/Roboto-Medium.ttf'),
+        'Roboto-SemiBold': require('../../../assets/fonts/Roboto-SemiBold.ttf'),
+        'Roboto-Light':   require('../../../assets/fonts/Roboto-Light.ttf'),
       }).finally(() => setFontsLoaded(true));
     }
     load();
