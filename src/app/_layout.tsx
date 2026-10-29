@@ -17,25 +17,14 @@ function LayoutContent() {
   const { isSplashReady } = useSplashScreen();
   useDeepLinking();
 
-  const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setFontsLoaded(true);
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!isSplashReady || !fontsLoaded || loading) return;
+    if (!isSplashReady) return;
     if (!session) {
       router.replace('/launch');
     }
-  }, [session, isSplashReady, fontsLoaded, loading, router]);
+  }, [session, isSplashReady, router]);
 
-  if (loading || !fontsLoaded || !isSplashReady) {
+  if (!isSplashReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
