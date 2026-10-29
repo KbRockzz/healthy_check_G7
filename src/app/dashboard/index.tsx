@@ -2,8 +2,8 @@
  * Màn hình chính của ứng dụng — Dashboard điều hướng
  * Hiển thị lưới các chức năng chính sau khi đăng nhập
  */
-import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '@/theme';
@@ -80,6 +80,7 @@ export default function HomeScreen() {
   const [todayWater, setTodayWater] = useState(0);
   const [todaySleep, setTodaySleep] = useState(0);
   const [userName, setUserName] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!session) {
@@ -91,47 +92,64 @@ export default function HomeScreen() {
     fetchData();
   }, [session]);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData().finally(() => setRefreshing(false));
+  }, [session]);
+
   async function fetchData() {
     if (!session) return;
     const today = new Date().toISOString().split('T')[0];
 
-    // Fetch today's steps
-    const { data: stepsData } = await supabase
-      .from('step_records')
-      .select('steps')
-      .eq('user_id', session.user.id)
-      .eq('recorded_on', today)
-      .single();
-    if (stepsData) setTodaySteps(stepsData.steps);
+    try {
+      // Fetch today's steps
+      const { data: stepsData, error: stepsErr } = await supabase
+        .from('step_records')
+        .select('steps')
+        .eq('user_id', session.user.id)
+        .eq('recorded_on', today)
+        .single();
+      if (stepsErr && stepsErr.code !== 'PGRST116') {
+        console.error('Lỗi lấy bước:', stepsErr);
+      }
+      if (stepsData) setTodaySteps(stepsData.steps);
 
-    // Fetch today's calories
-    const { data: nutritionData } = await supabase
-      .from('nutrition_logs')
-      .select('calories')
-      .eq('user_id', session.user.id)
-      .eq('logged_on', today);
-    const totalCal = nutritionData?.reduce((s, i) => s + i.calories, 0) || 0;
-    setTodayCalories(totalCal);
+      // Fetch today's calories
+      const { data: nutritionData, error: calErr } = await supabase
+        .from('nutrition_logs')
+        .select('calories')
+        .eq('user_id', session.user.id)
+        .eq('logged_on', today);
+      if (calErr) console.error('Lỗi lấy calo:', calErr);
+      const totalCal = nutritionData?.reduce((s, i) => s + i.calories, 0) || 0;
+      setTodayCalories(totalCal);
 
-    // Fetch today's water
-    const { data: waterData } = await supabase
-      .from('health_metrics')
-      .select('value')
-      .eq('user_id', session.user.id)
-      .eq('metric_kind', 'water_intake')
-      .gte('recorded_at', new Date(today + 'T00:00:00Z').toISOString())
-      .lt('recorded_at', new Date(today + 'T23:59:59Z').toISOString());
-    const totalWater = waterData?.reduce((s, i) => s + i.value, 0) || 0;
-    setTodayWater(totalWater);
+      // Fetch today's water
+      const { data: waterData, error: waterErr } = await supabase
+        .from('health_metrics')
+        .select('value')
+        .eq('user_id', session.user.id)
+        .eq('metric_kind', 'water_intake')
+        .gte('recorded_at', new Date(today + 'T00:00:00Z').toISOString())
+        .lt('recorded_at', new Date(today + 'T23:59:59Z').toISOString());
+      if (waterErr) console.error('Lỗi lấy nước:', waterErr);
+      const totalWater = waterData?.reduce((s, i) => s + i.value, 0) || 0;
+      setTodayWater(totalWater);
 
-    // Fetch today's sleep
-    const { data: sleepData } = await supabase
-      .from('sleep_records')
-      .select('total_minutes')
-      .eq('user_id', session.user.id)
-      .eq('sleep_date', today)
-      .single();
-    if (sleepData) setTodaySleep(sleepData.total_minutes);
+      // Fetch today's sleep
+      const { data: sleepData, error: sleepErr } = await supabase
+        .from('sleep_records')
+        .select('total_minutes')
+        .eq('user_id', session.user.id)
+        .eq('sleep_date', today)
+        .single();
+      if (sleepErr && sleepErr.code !== 'PGRST116') {
+        console.error('Lỗi lấy giấc ngủ:', sleepErr);
+      }
+      if (sleepData) setTodaySleep(sleepData.total_minutes);
+    } catch (err) {
+      console.error('Lỗi fetch dashboard:', err);
+    }
   }
 
   const handleSignOut = async () => {
@@ -157,6 +175,14 @@ export default function HomeScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
