@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 // ---------------------------------------------------------------------
@@ -240,48 +241,55 @@ export interface DashboardSummary {
 // ---------------------------------------------------------------------
 // Cấu hình client Supabase
 // ---------------------------------------------------------------------
-const supabaseUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL ||
+  'https://pmaxtdfevzncqpbamwcq.supabase.co';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    '⚠️ Thiếu cấu hình Supabase:\n' +
-    '   - SUPABASE_URL\n' +
-    '   - SUPABASE_ANON_KEY\n' +
-    'Vui lòng thêm vào expo config hoặc env variables.'
-  );
-}
+const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtYXh0ZGZldnpuY3FwYmFtd2NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5ODY5NDEsImV4cCI6MjEwODU2Mjk0MX0.LoBewo64m-Bf98GTSniPO4CNw93FxWiq3nj1xmm_JZQ';
 
-// Web-safe storage that falls back to memory when SecureStore is unavailable
-const secureStorage = {
-  getItem: async (key: string) => {
+const memoryFallbackStorage: Record<string, string> = {};
+
+// Robust multi-platform storage (Web localStorage, iOS/Android AsyncStorage)
+const authStorage = {
+  getItem: async (key: string): Promise<string | null> => {
     try {
-      return await SecureStore.getItemAsync(key);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+      return await AsyncStorage.getItem(key);
     } catch {
-      return memoryStorage[key] ?? null;
+      return memoryFallbackStorage[key] ?? null;
     }
   },
-  setItem: async (key: string, value: string) => {
+  setItem: async (key: string, value: string): Promise<void> => {
     try {
-      await SecureStore.setItemAsync(key, value);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+      await AsyncStorage.setItem(key, value);
     } catch {
-      memoryStorage[key] = value;
+      memoryFallbackStorage[key] = value;
     }
   },
-  removeItem: async (key: string) => {
+  removeItem: async (key: string): Promise<void> => {
     try {
-      await SecureStore.deleteItemAsync(key);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+      await AsyncStorage.removeItem(key);
     } catch {
-      delete memoryStorage[key];
+      delete memoryFallbackStorage[key];
     }
   },
 };
 
-const memoryStorage: Record<string, string> = {};
-
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: secureStorage,
+    storage: authStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

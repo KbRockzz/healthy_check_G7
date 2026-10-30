@@ -1,5 +1,5 @@
 /**
- * Màn hình Đăng ký — đã tích hợp Auth Context
+ * Màn hình Đăng ký — đã tích hợp Auth Context & Session Handling
  */
 import { useState } from 'react';
 import {
@@ -13,7 +13,7 @@ import { useAuth } from '@/lib/hooks/use-auth';
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, signIn } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,13 +30,29 @@ export default function SignUpScreen() {
       return;
     }
     setBusy(true);
-    const { error } = await signUp(email.trim(), password, fullName.trim());
-    setBusy(false);
+    const { error, session } = await signUp(email.trim(), password, fullName.trim());
     if (error) {
-      Alert.alert('Đăng ký thất bại', error.message);
-    } else {
-      // Đăng ký thành công - chuyển đến onboarding
+      setBusy(false);
+      Alert.alert('Đăng ký thất bại', error.message || 'Không thể tạo tài khoản');
+      return;
+    }
+
+    if (session) {
+      setBusy(false);
       router.replace('/onboarding');
+    } else {
+      // Tự động đăng nhập
+      const { error: signInErr } = await signIn(email.trim(), password);
+      setBusy(false);
+      if (!signInErr) {
+        router.replace('/onboarding');
+      } else {
+        Alert.alert(
+          'Đăng ký thành công! 🎉',
+          'Tài khoản của bạn đã được tạo thành công. Vui lòng đăng nhập để bắt đầu.',
+          [{ text: 'Đăng nhập ngay', onPress: () => router.replace('/auth/sign-in') }]
+        );
+      }
     }
   };
 
@@ -58,7 +74,13 @@ export default function SignUpScreen() {
               <Text style={styles.label}>Họ và tên</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="person-outline" size={20} color={COLORS.textTertiary} style={{ marginRight: 8 }} />
-                <TextInput style={styles.input} placeholder="Nhập họ tên" placeholderTextColor={COLORS.textTertiary} value={fullName} onChangeText={setFullName} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nhập họ tên"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={fullName}
+                  onChangeText={setFullName}
+                />
               </View>
             </View>
 
@@ -66,7 +88,15 @@ export default function SignUpScreen() {
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="mail-outline" size={20} color={COLORS.textTertiary} style={{ marginRight: 8 }} />
-                <TextInput style={styles.input} placeholder="Nhập email" placeholderTextColor={COLORS.textTertiary} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nhập email"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
               </View>
             </View>
 
@@ -74,14 +104,27 @@ export default function SignUpScreen() {
               <Text style={styles.label}>Mật khẩu</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="lock-closed-outline" size={20} color={COLORS.textTertiary} style={{ marginRight: 8 }} />
-                <TextInput style={styles.input} placeholder="Nhập mật khẩu" placeholderTextColor={COLORS.textTertiary} value={password} onChangeText={setPassword} secureTextEntry={!showPassword} autoCapitalize="none" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
                   <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               </View>
             </View>
 
-            <TouchableOpacity style={[styles.button, busy && styles.buttonDisabled]} onPress={handleSignUp} disabled={busy} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={[styles.button, busy && styles.buttonDisabled]}
+              onPress={handleSignUp}
+              disabled={busy}
+              activeOpacity={0.8}
+            >
               {busy ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={styles.buttonText}>Đăng ký</Text>}
             </TouchableOpacity>
           </View>
@@ -100,21 +143,85 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, backgroundColor: COLORS.bg },
-  container: { flex: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40, justifyContent: 'space-between' },
-  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  header: { marginBottom: 30 },
-  title: { fontSize: FONT_SIZES['3xl'], fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, color: COLORS.textPrimary, marginBottom: 8 },
-  subtitle: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
-  form: { marginBottom: 30 },
-  inputGroup: { marginBottom: 20 },
-  label: { fontSize: FONT_SIZES.sm, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textPrimary, marginBottom: 8 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.md, paddingHorizontal: 16, height: 52 },
-  input: { flex: 1, fontSize: FONT_SIZES.base, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.base as string },
-  eyeIcon: { padding: 8 },
-  button: { backgroundColor: COLORS.primary, height: 52, borderRadius: BORDER_RADIUS.full, alignItems: 'center', justifyContent: 'center', marginTop: 10, ...SHADOWS.md },
-  buttonDisabled: { opacity: 0.7 },
-  buttonText: { fontSize: FONT_SIZES.base, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, color: COLORS.textInverse },
-  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  footerText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
-  signInLink: { fontSize: FONT_SIZES.sm, fontWeight: 'bold', color: COLORS.primary },
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 56,
+    paddingBottom: 32,
+    justifyContent: 'space-between',
+  },
+  backButton: { marginBottom: 16, width: 40, height: 40, justifyContent: 'center' },
+  header: { marginBottom: 28 },
+  title: {
+    fontSize: FONT_SIZES['3xl'],
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+    marginBottom: 8,
+    fontFamily: FONT_FAMILY.bold as string,
+  },
+  subtitle: {
+    fontSize: FONT_SIZES.base,
+    color: COLORS.textSecondary,
+    lineHeight: 22,
+    fontFamily: FONT_FAMILY.base as string,
+  },
+  form: { width: '100%' },
+  inputGroup: { marginBottom: 18 },
+  label: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+    fontFamily: FONT_FAMILY.semiBold as string,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: 16,
+    height: 52,
+  },
+  input: {
+    flex: 1,
+    fontSize: FONT_SIZES.base,
+    color: COLORS.textPrimary,
+    fontFamily: FONT_FAMILY.base as string,
+  },
+  eyeIcon: { padding: 4 },
+  button: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    height: 54,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    ...SHADOWS.md,
+  },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: 'bold',
+    color: COLORS.textInverse,
+    fontFamily: FONT_FAMILY.bold as string,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  footerText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.base as string,
+  },
+  signInLink: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold as string,
+  },
 });
