@@ -55,6 +55,14 @@ const FEATURES: FeatureItem[] = [
     route: '/dashboard/cycle',
   },
   {
+    id: 'water',
+    title: 'Uống nước',
+    subtitle: 'Theo dõi lượng nước hàng ngày',
+    icon: 'water',
+    color: '#3B82F6',
+    route: '/dashboard/water',
+  },
+  {
     id: 'health-data',
     title: 'Health Data',
     subtitle: 'All metrics overview',
