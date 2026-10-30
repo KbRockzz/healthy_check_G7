@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   stepsCount: { fontSize: FONT_SIZES['4xl'], fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 8 },
   stepsLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
-  statusText: { fontSize: FONT_SIZES.lg, fontWeight: '600', marginTop: 12 },
+  statusText: { fontSize: FONT_SIZES.lg, fontWeight: '600', marginTop: 12, fontFamily: FONT_FAMILY.semiBold as string },
   progressBar: {
     width: '80%',
     height: 8,

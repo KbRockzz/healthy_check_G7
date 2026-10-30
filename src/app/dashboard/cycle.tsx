@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cycleDay: { fontSize: 24, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 8 },
+  cycleDay: { fontSize: 24, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 8, fontFamily: FONT_FAMILY.bold as string },
   cycleSub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
   infoCard: {
     backgroundColor: COLORS.accent + '15',

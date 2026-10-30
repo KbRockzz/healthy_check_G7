@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   waterCircle: { alignItems: 'center', justifyContent: 'center' },
   waterValue: { fontSize: 48, fontWeight: 'bold', color: COLORS.primary, marginTop: 8 },
   waterUnit: { fontSize: FONT_SIZES.base, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
-  statusText: { fontSize: FONT_SIZES.lg, fontWeight: '600', marginTop: 12 },
+  statusText: { fontSize: FONT_SIZES.lg, fontWeight: '600', marginTop: 12, fontFamily: FONT_FAMILY.semiBold as string },
   progressBar: {
     width: '80%',
     height: 8,

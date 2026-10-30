@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   },
   sleepValue: { fontSize: 28, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: 8 },
   sleepLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string },
-  statusText: { fontSize: FONT_SIZES.lg, fontWeight: '600', marginTop: 12 },
+  statusText: { fontSize: FONT_SIZES.lg, fontWeight: '600', marginTop: 12, fontFamily: FONT_FAMILY.semiBold as string },
   progressBar: {
     width: '80%',
     height: 6,
