@@ -85,7 +85,7 @@ export default function HomeScreen() {
       // 3. Fetch today's water (đồng bộ hoàn hảo với /dashboard/water)
       const waterKey = `@healthy_check_water_${today}`;
       const savedWater = await AsyncStorage.getItem(waterKey);
-      let activeWater = savedWater ? parseInt(savedWater, 10) : 1600;
+      let activeWater = savedWater ? parseInt(savedWater, 10) : 0;
 
       const { data: waterData } = await supabase
         .from('health_metrics')
@@ -99,7 +99,7 @@ export default function HomeScreen() {
         activeWater = totalWater;
         await AsyncStorage.setItem(waterKey, totalWater.toString());
       } else if (!savedWater) {
-        await AsyncStorage.setItem(waterKey, '1600');
+        await AsyncStorage.setItem(waterKey, '0');
       }
       setWaterMl(activeWater);
 

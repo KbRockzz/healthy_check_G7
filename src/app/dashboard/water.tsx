@@ -54,7 +54,7 @@ export default function WaterScreen() {
 
       // 1. Kiểm tra bộ nhớ cục bộ
       const savedWater = await AsyncStorage.getItem(storageKey);
-      let currentVal = savedWater ? parseInt(savedWater, 10) : 1600;
+      let currentVal = savedWater ? parseInt(savedWater, 10) : 0;
 
       // 2. Đồng bộ từ Supabase nếu có
       const { data: waterData } = await supabase
@@ -69,8 +69,8 @@ export default function WaterScreen() {
       if (total > 0) {
         currentVal = total;
         await AsyncStorage.setItem(storageKey, total.toString());
-      } else if (!savedWater) {
-        await AsyncStorage.setItem(storageKey, '1600');
+      } else if (!savedWater && total > 0) {
+        await AsyncStorage.setItem(storageKey, total.toString());
       }
 
       setTodayWater(currentVal);

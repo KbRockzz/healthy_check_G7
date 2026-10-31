@@ -47,6 +47,7 @@ export default function HealthDataScreen() {
         const savedSteps = await AsyncStorage.getItem(`@healthy_check_steps_${today}`);
         if (savedSteps) setStepsToday(parseInt(savedSteps, 10));
       }
+      setLoaded(true);
     } catch {
       setLoaded(true);
       // keep
