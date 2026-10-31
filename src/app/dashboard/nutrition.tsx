@@ -51,6 +51,7 @@ export default function NutritionScreen() {
   const [loaded, setLoaded] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [entries, setEntries] = useState<MealEntry[]>([]);
 
   // Manual Form
   const [foodName, setFoodName] = useState('');
@@ -74,8 +75,19 @@ export default function NutritionScreen() {
 
       if (data && data.length > 0) {
         const totalCal = data.reduce((sum, item) => sum + (item.calories || 0), 0);
+        const totalProtein = data.reduce((sum, item) => sum + (item.protein_g || 0), 0);
+        const totalCarbs = data.reduce((sum, item) => sum + (item.carbs_g || 0), 0);
+        const totalFat = data.reduce((sum, item) => sum + (item.fat_g || 0), 0);
+        
         setCalories(totalCal);
+        setProtein(totalProtein);
+        setCarbs(totalCarbs);
+        setFat(totalFat);
         await AsyncStorage.setItem(storageKey, totalCal.toString());
+      } else {
+        setProtein(0);
+        setCarbs(0);
+        setFat(0);
       }
 
       if (profile?.calorie_goal) setGoal(profile.calorie_goal);
@@ -232,58 +244,37 @@ export default function NutritionScreen() {
           </View>
         </View>
 
-        {/* Meal Categories */}
+        {/* Meal Categories - chỉ hiển thị khi có dữ liệu */}
         <Text style={styles.sectionTitle}>Các bữa ăn trong ngày</Text>
-
-        <View style={styles.mealsList}>
-          {/* Breakfast */}
-          <View style={styles.mealCard}>
-            <View style={styles.mealHeader}>
-              <View style={styles.mealTitleRow}>
-                <Ionicons name="sunny-outline" size={20} color="#F59E0B" />
-                <Text style={styles.mealName}>Bữa sáng (Breakfast)</Text>
-              </View>
-              <Text style={styles.mealCalories}>450 kcal</Text>
-            </View>
-            <Text style={styles.mealDetailText}>• Phở bò tái nạm (1 tô vừa)</Text>
+        
+        {entries.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="restaurant-outline" size={48} color={COLORS.textTertiary} />
+            <Text style={styles.emptyText}>Chưa có bữa ăn nào hôm nay</Text>
+            <Text style={styles.emptySubtext}>Nhấn "Ghi nhận món ăn mới" để bắt đầu</Text>
           </View>
-
-          {/* Lunch */}
-          <View style={styles.mealCard}>
-            <View style={styles.mealHeader}>
-              <View style={styles.mealTitleRow}>
-                <Ionicons name="partly-sunny-outline" size={20} color="#10B981" />
-                <Text style={styles.mealName}>Bữa trưa (Lunch)</Text>
+        ) : (
+          <View style={styles.mealsList}>
+            {entries.map((meal) => (
+              <View key={meal.id} style={styles.mealCard}>
+                <View style={styles.mealHeader}>
+                  <View style={styles.mealTitleRow}>
+                    <Ionicons name="restaurant" size={20} color="#D97706" />
+                    <Text style={styles.mealName}>{meal.food_name}</Text>
+                  </View>
+                  <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
+                </View>
+                <Text style={styles.mealDetailText}>
+                  {meal.meal === 'breakfast' && '🌅 Bữa sáng'}
+                  {meal.meal === 'lunch' && '☀️ Bữa trưa'}
+                  {meal.meal === 'dinner' && '🌙 Bữa tối'}
+                  {meal.meal === 'snack' && '🍎 Bữa phụ'}
+                  {' | Protein: ' + meal.protein_g + 'g | Carbs: ' + meal.carbs_g + 'g | Fat: ' + meal.fat_g + 'g'}
+                </Text>
               </View>
-              <Text style={styles.mealCalories}>650 kcal</Text>
-            </View>
-            <Text style={styles.mealDetailText}>• Cơm gạo lứt ức gà nướng & rau củ hấp</Text>
+            ))}
           </View>
-
-          {/* Dinner */}
-          <View style={styles.mealCard}>
-            <View style={styles.mealHeader}>
-              <View style={styles.mealTitleRow}>
-                <Ionicons name="moon-outline" size={20} color="#6366F1" />
-                <Text style={styles.mealName}>Bữa tối (Dinner)</Text>
-              </View>
-              <Text style={styles.mealCalories}>600 kcal</Text>
-            </View>
-            <Text style={styles.mealDetailText}>• Salad cá hồi dầu giấm quả bơ</Text>
-          </View>
-
-          {/* Snack */}
-          <View style={styles.mealCard}>
-            <View style={styles.mealHeader}>
-              <View style={styles.mealTitleRow}>
-                <Ionicons name="cafe-outline" size={20} color="#EC4899" />
-                <Text style={styles.mealName}>Bữa phụ (Snacks)</Text>
-              </View>
-              <Text style={styles.mealCalories}>150 kcal</Text>
-            </View>
-            <Text style={styles.mealDetailText}>• 1 quả táo xanh & 10 hạt hạnh nhân</Text>
-          </View>
-        </View>
+        )}
 
         {/* Action Button */}
         <TouchableOpacity
@@ -375,6 +366,9 @@ export default function NutritionScreen() {
 
 const styles = StyleSheet.create({
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+  emptyState: { alignItems: 'center', paddingVertical: 40 },
+  emptyText: { fontSize: 16, fontWeight: 'bold', color: COLORS.textSecondary, marginTop: 12, fontFamily: FONT_FAMILY.bold as string },
+  emptySubtext: { fontSize: 13, color: COLORS.textTertiary, textAlign: 'center', marginTop: 4, fontFamily: FONT_FAMILY.base as string },
   container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row',

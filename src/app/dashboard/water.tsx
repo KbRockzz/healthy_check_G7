@@ -52,11 +52,8 @@ export default function WaterScreen() {
       const today = new Date().toISOString().split('T')[0];
       const storageKey = `@healthy_check_water_${today}`;
 
-      // 1. Kiểm tra bộ nhớ cục bộ
-      const savedWater = await AsyncStorage.getItem(storageKey);
-      let currentVal = savedWater ? parseInt(savedWater, 10) : 0;
-
-      // 2. Đồng bộ từ Supabase nếu có
+      
+      // 1. Lấy từ Supabase trước
       const { data: waterData } = await supabase
         .from('health_metrics')
         .select('value')
@@ -65,15 +62,32 @@ export default function WaterScreen() {
         .gte('recorded_at', new Date(today + 'T00:00:00Z').toISOString())
         .lt('recorded_at', new Date(today + 'T23:59:59Z').toISOString());
 
-      const total = waterData?.reduce((s, i) => s + i.value, 0) || 0;
-      if (total > 0) {
-        currentVal = total;
-        await AsyncStorage.setItem(storageKey, total.toString());
-      } else if (!savedWater && total > 0) {
-        await AsyncStorage.setItem(storageKey, total.toString());
+      const dbTotal = waterData?.reduce((s, i) => s + i.value, 0) || 0;
+      let currentVal = dbTotal > 0 ? dbTotal : 0;
+
+      // 2. Fallback từ AsyncStorage nếu không có trong DB
+      if (currentVal === 0) {
+        const savedWater = await AsyncStorage.getItem(storageKey);
+        if (savedWater) {
+          currentVal = parseInt(savedWater, 10);
+          // Đồng bộ ngược lên DB
+          if (currentVal > 0 && session.user?.id) {
+            await supabase.from('health_metrics').insert({
+              user_id: session.user.id,
+              metric_kind: 'water_intake',
+              value: currentVal,
+              unit: 'ml',
+              recorded_at: new Date().toISOString(),
+              source: 'manual',
+            });
+          }
+        }
       }
 
       setTodayWater(currentVal);
+      if (currentVal > 0) {
+        await AsyncStorage.setItem(storageKey, currentVal.toString());
+      }
 
       const { data: profileData } = await supabase
         .from('profiles')

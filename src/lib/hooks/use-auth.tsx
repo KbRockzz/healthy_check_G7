@@ -139,6 +139,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.warn('Lỗi signOut:', e);
     }
+    // Xóa hết AsyncStorage cache để không dính dữ liệu user cũ
+    import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
+      AsyncStorage.getAllKeys().then((keys) => {
+        AsyncStorage.multiRemove(keys).catch(() => {});
+      }).catch(() => {});
+    }).catch(() => {});
     setSession(null);
     setProfile(null);
   }

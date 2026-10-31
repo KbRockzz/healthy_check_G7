@@ -67,6 +67,7 @@ export default function SleepScreen() {
         }
       }
 
+      // Luôn lấy từ profile để đảm bảo goal hiện tại
       if (profile?.sleep_goal_minutes) setGoalMins(profile.sleep_goal_minutes);
       if (profile?.bedtime) setBedtime(profile.bedtime);
       if (profile?.wake_time) setWakeTime(profile.wake_time);
@@ -129,7 +130,7 @@ export default function SleepScreen() {
 
   const hours = Math.floor(todaySleepMins / 60);
   const minutes = todaySleepMins % 60;
-  const pct = Math.min(100, Math.round((todaySleepMins / goalMins) * 100));
+  const pct = goalMins > 0 ? Math.min(100, Math.round((todaySleepMins / goalMins) * 100)) : 0;
 
   if (!loaded) {
     return (
