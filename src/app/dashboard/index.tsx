@@ -382,7 +382,7 @@ export default function HomeScreen() {
               <View style={[styles.metricIconWrap, { backgroundColor: '#F3E8FF' }]}>
                 <Ionicons name="moon" size={22} color="#8B5CF6" />
               </View>
-              <Text style={[styles.metricProgressText, { color: '#8B5CF6' }]}>{goalMins > 0 ? Math.min(100, Math.round((todaySleepMins / goalMins) * 100)) : 0}%</Text>
+              <Text style={[styles.metricProgressText, { color: '#8B5CF6' }]}>{480 > 0 ? Math.min(100, Math.round((todaySleepMins / 480) * 100)) : 0}%</Text>
             </View>
             <Text style={styles.metricTitle}>Sleep</Text>
             <Text style={styles.metricValue}>{Math.floor(todaySleepMins / 60)}h {todaySleepMins % 60}m</Text>
