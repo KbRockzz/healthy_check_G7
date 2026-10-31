@@ -3,6 +3,7 @@
  */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, Profile } from '@/lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType {
   session: any;
@@ -140,11 +141,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn('Lỗi signOut:', e);
     }
     // Xóa hết AsyncStorage cache để không dính dữ liệu user cũ
-    import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
+    try {
       AsyncStorage.getAllKeys().then((keys) => {
         AsyncStorage.multiRemove(keys).catch(() => {});
       }).catch(() => {});
-    }).catch(() => {});
+    } catch { /* ignore */ }
     setSession(null);
     setProfile(null);
   }
