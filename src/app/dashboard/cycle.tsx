@@ -49,9 +49,8 @@ export default function CycleScreen() {
       return;
     }
     loadCycleData();
-    if (profile?.cycle_length_days) setCycleLength(profile.cycle_length_days);
     setLoaded(true);
-  }, [session, profile, authLoading]);
+  }, [session, authLoading]);
 
   async function loadCycleData() {
     if (!session) return;

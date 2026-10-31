@@ -163,28 +163,6 @@ export default function HomeScreen() {
     if (profile?.water_goal_ml) setWaterGoalMl(profile.water_goal_ml);
 
     fetchData();
-    
-    // Initial health score fetch
-    (async () => {
-      try {
-        const { data } = await supabase.rpc('get_dashboard_summary');
-        if (data?.health_score) {
-          setHealthScore(data.health_score.score || 88);
-        } else {
-          const stepsScore = Math.min((todaySteps / stepGoal) * 25, 25);
-          const sleepScore = Math.min((todaySleepMins / 480) * 25, 25);
-          const calScore = Math.min((todayCalories / calorieGoal) * 25, 25);
-          const waterScore = Math.min((waterMl / waterGoalMl) * 25, 25);
-          setHealthScore(Math.round(stepsScore + sleepScore + calScore + waterScore));
-        }
-      } catch {
-        const stepsScore = Math.min((todaySteps / stepGoal) * 25, 25);
-        const sleepScore = Math.min((todaySleepMins / 480) * 25, 25);
-        const calScore = Math.min((todayCalories / calorieGoal) * 25, 25);
-        const waterScore = Math.min((waterMl / waterGoalMl) * 25, 25);
-        setHealthScore(Math.round(stepsScore + sleepScore + calScore + waterScore));
-      }
-    })();
   }, [session, profile, authLoading, fetchData]);
 
   const onRefresh = useCallback(() => {
