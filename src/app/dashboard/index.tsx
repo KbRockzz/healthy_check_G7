@@ -30,14 +30,15 @@ export default function HomeScreen() {
   const [userGender, setUserGender] = useState<'male' | 'female' | 'other'>('female');
 
   // Metrics state
-  const [todaySteps, setTodaySteps] = useState<number>(6432);
+  const [todaySteps, setTodaySteps] = useState<number>(0);
   const [stepGoal, setStepGoal] = useState<number>(10000);
-  const [todaySleepMins, setTodaySleepMins] = useState<number>(450); // 7h 30m
-  const [todayCalories, setTodayCalories] = useState<number>(1850);
+  const [todaySleepMins, setTodaySleepMins] = useState<number>(0);
+  const [todayCalories, setTodayCalories] = useState<number>(0);
   const [calorieGoal, setCalorieGoal] = useState<number>(2200);
-  const [waterMl, setWaterMl] = useState<number>(1600);
+  const [waterMl, setWaterMl] = useState<number>(0);
   const [waterGoalMl, setWaterGoalMl] = useState<number>(2000);
   const [healthScore, setHealthScore] = useState<number>(0);
+  const [dataLoaded, setDataLoaded] = useState<boolean>(false);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState<boolean>(false);
@@ -132,6 +133,8 @@ export default function HomeScreen() {
       }
     } catch {
       // Keep state values
+    } finally {
+      setDataLoaded(true);
     }
   }, [session]);
 
@@ -188,6 +191,14 @@ export default function HomeScreen() {
     setRefreshing(true);
     fetchData().finally(() => setRefreshing(false));
   }, [fetchData]);
+
+  if (!dataLoaded && !refreshing) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   const handleAddWater = async (amount: number) => {
     const today = new Date().toISOString().split('T')[0];

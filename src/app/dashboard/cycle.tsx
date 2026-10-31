@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert,
+  Alert, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,12 +34,13 @@ export default function CycleScreen() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
 
-  const [currentDay, setCurrentDay] = useState(14);
-  const [cycleLength, setCycleLength] = useState(28);
+  const [currentDay, setCurrentDay] = useState<number>(0);
+  const [cycleLength, setCycleLength] = useState<number>(28);
   const [periodStart, setPeriodStart] = useState<string>('');
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>(['cramps']);
-  const [selectedMood, setSelectedMood] = useState<string>('calm');
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [selectedMood, setSelectedMood] = useState<string>('');
   const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,6 +50,7 @@ export default function CycleScreen() {
     }
     loadCycleData();
     if (profile?.cycle_length_days) setCycleLength(profile.cycle_length_days);
+    setLoaded(true);
   }, [session, profile, authLoading]);
 
   async function loadCycleData() {
@@ -74,6 +76,9 @@ export default function CycleScreen() {
       if (rec?.symptom) setSelectedSymptoms([rec.symptom]);
       if (rec?.mood) setSelectedMood(rec.mood);
     } catch { /* ignore */ }
+    finally {
+      setLoaded(true);
+    }
   }
 
 
@@ -84,7 +89,7 @@ export default function CycleScreen() {
     );
   };
 
-  const daysToNext = cycleLength - currentDay;
+  const daysToNext = currentDay > 0 ? cycleLength - currentDay : 0;
 
   async function handleSave() {
     if (!session?.user?.id) return;
@@ -108,6 +113,14 @@ export default function CycleScreen() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (!loaded) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#DB2777" />
+      </View>
+    );
   }
 
   return (
@@ -236,6 +249,7 @@ export default function CycleScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row',

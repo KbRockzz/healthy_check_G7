@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +27,8 @@ interface MetricRow {
 export default function HealthDataScreen() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
-  const [stepsToday, setStepsToday] = useState(6432);
+  const [stepsToday, setStepsToday] = useState<number>(0);
+  const [loaded, setLoaded] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!session) return;
@@ -47,9 +48,10 @@ export default function HealthDataScreen() {
         if (savedSteps) setStepsToday(parseInt(savedSteps, 10));
       }
     } catch {
+      setLoaded(true);
       // keep
     }
-  }, [session]);
+  }, [session, setLoaded]);
 
   useFocusEffect(
     useCallback(() => {
@@ -64,7 +66,7 @@ export default function HealthDataScreen() {
       return;
     }
     loadData();
-  }, [session, authLoading, loadData]);
+  }, [session, authLoading, loadData, setLoaded]);
 
   // Tính toán BMI từ profile thực tế
   const height = profile?.height_cm || 168;
@@ -97,6 +99,14 @@ export default function HealthDataScreen() {
   const vitals = metrics.filter((m) => m.category === 'vitals');
   const body = metrics.filter((m) => m.category === 'body');
   const activity = metrics.filter((m) => m.category === 'activity');
+
+  if (!loaded) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -216,6 +226,7 @@ export default function HealthDataScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   container: { flex: 1, backgroundColor: COLORS.bg },
   content: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 110 },
   header: {

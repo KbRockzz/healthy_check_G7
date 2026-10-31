@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, TextInput, Modal,
+  Alert, TextInput, Modal, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,10 +31,11 @@ export default function SleepScreen() {
   // Dark Mode state (Đặc biệt phù hợp cho giao diện xem trước khi ngủ)
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  const [todaySleepMins, setTodaySleepMins] = useState(450); // 7h 30m
-  const [goalMins, setGoalMins] = useState(480); // 8h
+  const [todaySleepMins, setTodaySleepMins] = useState<number>(0);
+  const [goalMins, setGoalMins] = useState<number>(480); // 8h
   const [bedtime, setBedtime] = useState('23:15');
   const [wakeTime, setWakeTime] = useState('06:45');
+  const [loaded, setLoaded] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [entries, setEntries] = useState<SleepEntry[]>([]);
 
@@ -69,7 +70,9 @@ export default function SleepScreen() {
       if (profile?.sleep_goal_minutes) setGoalMins(profile.sleep_goal_minutes);
       if (profile?.bedtime) setBedtime(profile.bedtime);
       if (profile?.wake_time) setWakeTime(profile.wake_time);
+      setLoaded(true);
     } catch {
+      setLoaded(true);
       // keep state
     }
   }, [session, profile]);
@@ -127,6 +130,14 @@ export default function SleepScreen() {
   const hours = Math.floor(todaySleepMins / 60);
   const minutes = todaySleepMins % 60;
   const pct = Math.min(100, Math.round((todaySleepMins / goalMins) * 100));
+
+  if (!loaded) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#818CF8" />
+      </View>
+    );
+  }
 
   // Dynamic colors based on theme
   const theme = {
@@ -329,6 +340,7 @@ export default function SleepScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0B0F19' },
   container: { flex: 1 },
   header: {
     flexDirection: 'row',

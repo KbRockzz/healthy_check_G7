@@ -20,8 +20,8 @@ export default function WaterScreen() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [todayWater, setTodayWater] = useState(1600);
-  const [goal, setGoal] = useState(2000);
+  const [todayWater, setTodayWater] = useState<number>(0);
+  const [goal, setGoal] = useState<number>(2000);
   const [input, setInput] = useState('');
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -137,10 +137,10 @@ export default function WaterScreen() {
     }
   };
 
-  const progress = Math.min((todayWater / goal) * 100, 100);
+  const progress = todayWater > 0 ? Math.min((todayWater / goal) * 100, 100) : 0;
   const remaining = Math.max(goal - todayWater, 0);
-  const status = progress >= 100 ? 'Đã đủ nước! 💧' : progress >= 75 ? 'Khá tốt' : progress >= 50 ? 'Cố thêm' : 'Còn thiếu';
-  const statusColor = progress >= 100 ? COLORS.success : progress >= 75 ? COLORS.primary : COLORS.warning;
+  const status = todayWater === 0 ? 'Chưa ghi nhận' : progress >= 100 ? 'Đã đủ nước! 💧' : progress >= 75 ? 'Khá tốt' : progress >= 50 ? 'Cố thêm' : 'Còn thiếu';
+  const statusColor = todayWater === 0 ? COLORS.textTertiary : progress >= 100 ? COLORS.success : progress >= 75 ? COLORS.primary : COLORS.warning;
 
   if (loading) {
     return (

@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, TextInput, Modal,
+  Alert, TextInput, Modal, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,8 +28,9 @@ export default function StepsScreen() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
 
-  const [steps, setSteps] = useState(6432);
-  const [goal, setGoal] = useState(10000);
+  const [steps, setSteps] = useState<number>(0);
+  const [goal, setGoal] = useState<number>(10000);
+  const [loaded, setLoaded] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [customInput, setCustomInput] = useState('');
 
@@ -53,7 +54,9 @@ export default function StepsScreen() {
         await AsyncStorage.setItem(storageKey, data.steps.toString());
       }
       if (profile?.step_goal) setGoal(profile.step_goal);
+      setLoaded(true);
     } catch {
+      setLoaded(true);
       // keep state
     }
   }, [session, profile]);
@@ -97,6 +100,14 @@ export default function StepsScreen() {
   const caloriesBurned = Math.round(steps * 0.045);
   const activeMins = Math.round(steps / 120);
   const progressPct = Math.min(100, Math.round((steps / goal) * 100));
+
+  if (!loaded) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -245,6 +256,7 @@ export default function StepsScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row',

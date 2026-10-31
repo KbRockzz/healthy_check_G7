@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, TextInput, Modal,
+  Alert, TextInput, Modal, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,16 +38,17 @@ export default function NutritionScreen() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
 
-  const [calories, setCalories] = useState(1850);
-  const [goal, setGoal] = useState(2200);
+  const [calories, setCalories] = useState<number>(0);
+  const [goal, setGoal] = useState<number>(2200);
 
   // Macros state
-  const [carbs, setCarbs] = useState(210);
+  const [carbs, setCarbs] = useState<number>(0);
   const [carbsGoal] = useState(250);
-  const [protein, setProtein] = useState(95);
+  const [protein, setProtein] = useState<number>(0);
   const [proteinGoal] = useState(110);
-  const [fat, setFat] = useState(55);
+  const [fat, setFat] = useState<number>(0);
   const [fatGoal] = useState(70);
+  const [loaded, setLoaded] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -78,7 +79,9 @@ export default function NutritionScreen() {
       }
 
       if (profile?.calorie_goal) setGoal(profile.calorie_goal);
+      setLoaded(true);
     } catch {
+      setLoaded(true);
       // keep state
     }
   }, [session, profile]);
@@ -149,6 +152,14 @@ export default function NutritionScreen() {
   };
 
   const remaining = Math.max(0, goal - calories);
+
+  if (!loaded) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -363,6 +374,7 @@ export default function NutritionScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row',
