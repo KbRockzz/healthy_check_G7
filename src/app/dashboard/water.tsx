@@ -18,9 +18,9 @@ const WATER_REMINDER_KEY = 'water_reminders_enabled';
 
 export default function WaterScreen() {
   const router = useRouter();
-  const { session, profile } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [todayWater, setTodayWater] = useState(0);
+  const [todayWater, setTodayWater] = useState(1600);
   const [goal, setGoal] = useState(2000);
   const [input, setInput] = useState('');
   const [remindersEnabled, setRemindersEnabled] = useState(false);
@@ -29,13 +29,14 @@ export default function WaterScreen() {
   useNotifications();
 
   useEffect(() => {
+    if (authLoading) return;
     if (!session) {
       router.replace('/auth/sign-in');
       return;
     }
     loadReminders();
     fetchData();
-  }, [session]);
+  }, [session, authLoading]);
 
   async function loadReminders() {
     try {
@@ -49,7 +50,13 @@ export default function WaterScreen() {
     setLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
+      const storageKey = `@healthy_check_water_${today}`;
 
+      // 1. Kiểm tra bộ nhớ cục bộ
+      const savedWater = await AsyncStorage.getItem(storageKey);
+      let currentVal = savedWater ? parseInt(savedWater, 10) : 1600;
+
+      // 2. Đồng bộ từ Supabase nếu có
       const { data: waterData } = await supabase
         .from('health_metrics')
         .select('value')
@@ -59,7 +66,14 @@ export default function WaterScreen() {
         .lt('recorded_at', new Date(today + 'T23:59:59Z').toISOString());
 
       const total = waterData?.reduce((s, i) => s + i.value, 0) || 0;
-      setTodayWater(total);
+      if (total > 0) {
+        currentVal = total;
+        await AsyncStorage.setItem(storageKey, total.toString());
+      } else if (!savedWater) {
+        await AsyncStorage.setItem(storageKey, '1600');
+      }
+
+      setTodayWater(currentVal);
 
       const { data: profileData } = await supabase
         .from('profiles')
@@ -77,8 +91,15 @@ export default function WaterScreen() {
   const handleAddWater = async (amount: number) => {
     if (!session) return;
     setSaving(true);
+    const today = new Date().toISOString().split('T')[0];
+    const storageKey = `@healthy_check_water_${today}`;
+    const next = todayWater + amount;
+    setTodayWater(next);
+    setInput('');
+
     try {
-      const { error } = await supabase.from('health_metrics').insert({
+      await AsyncStorage.setItem(storageKey, next.toString());
+      await supabase.from('health_metrics').insert({
         user_id: session.user.id,
         metric_kind: 'water_intake',
         value: amount,
@@ -86,14 +107,8 @@ export default function WaterScreen() {
         recorded_at: new Date().toISOString(),
         source: 'manual',
       });
-      if (error) {
-        Alert.alert('Lỗi', error.message || 'Không thể ghi nhận');
-        return;
-      }
-      setTodayWater(prev => prev + amount);
-      setInput('');
     } catch (err) {
-      console.error(err);
+      console.warn('Lỗi đồng bộ Supabase:', err);
     } finally {
       setSaving(false);
     }

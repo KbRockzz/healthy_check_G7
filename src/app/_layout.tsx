@@ -1,8 +1,8 @@
 /**
- * Root layout — Auth-aware navigation
+ * Root layout — Auth-aware navigation & Protection
  */
-import { useEffect, useState } from 'react';
-import { Stack, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { COLORS } from '@/theme';
@@ -13,18 +13,28 @@ import { useDeepLinking } from '@/lib/hooks/use-deep-linking';
 // Content component - uses hooks inside AuthProvider
 function LayoutContent() {
   const router = useRouter();
-  const { session } = useAuth();
+  const segments = useSegments();
+  const { session, loading: authLoading } = useAuth();
   const { isSplashReady } = useSplashScreen();
   useDeepLinking();
 
   useEffect(() => {
-    if (!isSplashReady) return;
-    if (!session) {
-      router.replace('/launch');
-    }
-  }, [session, isSplashReady, router]);
+    // Chỉ điều hướng khi font và auth đã sẵn sàng
+    if (!isSplashReady || authLoading) return;
 
-  if (!isSplashReady) {
+    const firstSegment = segments[0] || '';
+    const inAuthGroup = firstSegment === 'auth' || firstSegment === 'launch';
+
+    if (!session && !inAuthGroup) {
+      // Người dùng chưa đăng nhập truy cập trang yêu cầu đăng nhập -> điều hướng về launch
+      router.replace('/launch');
+    } else if (session && inAuthGroup) {
+      // Người dùng đã có session mà đang ở trang auth/launch -> vào thẳng dashboard
+      router.replace('/dashboard');
+    }
+  }, [session, authLoading, isSplashReady, segments, router]);
+
+  if (!isSplashReady || authLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -42,6 +52,7 @@ function LayoutContent() {
         }}
       >
         {/* Auth flow */}
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="launch" options={{ title: 'Launch' }} />
         <Stack.Screen name="auth/sign-in" options={{ title: 'Sign In' }} />
         <Stack.Screen name="auth/sign-up" options={{ title: 'Sign Up' }} />
@@ -54,7 +65,6 @@ function LayoutContent() {
         <Stack.Screen name="dashboard/nutrition" options={{ title: 'Nutrition' }} />
         <Stack.Screen name="dashboard/cycle" options={{ title: 'Cycle' }} />
         <Stack.Screen name="dashboard/water" options={{ title: 'Uống nước' }} />
-        <Stack.Screen name="dashboard/heart-rate" options={{ title: 'Nhịp tim' }} />
         <Stack.Screen name="health-data" options={{ title: 'Health Data' }} />
         <Stack.Screen name="explore" options={{ title: 'Explore' }} />
         <Stack.Screen name="explore/[slug]" options={{ title: 'Bài viết' }} />
@@ -66,7 +76,7 @@ function LayoutContent() {
   );
 }
 
-// RootLayout just wraps with AuthProvider
+// RootLayout wraps with AuthProvider
 export default function RootLayout() {
   return (
     <AuthProvider>

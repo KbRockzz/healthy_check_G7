@@ -240,17 +240,17 @@ export interface DashboardSummary {
 // ---------------------------------------------------------------------
 // Cấu hình client Supabase
 // ---------------------------------------------------------------------
-const supabaseUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL ||
+  'https://pmaxtdfevzncqpbamwcq.supabase.co';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    '⚠️ Thiếu cấu hình Supabase:\n' +
-    '   - SUPABASE_URL\n' +
-    '   - SUPABASE_ANON_KEY\n' +
-    'Vui lòng thêm vào expo config hoặc env variables.'
-  );
-}
+const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtYXh0ZGZldnpuY3FwYmFtd2NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5ODY5NDEsImV4cCI6MjEwODU2Mjk0MX0.LoBewo64m-Bf98GTSniPO4CNw93FxWiq3nj1xmm_JZQ';
+
+const memoryStorage: Record<string, string> = {};
 
 // Web-safe storage that falls back to memory when SecureStore is unavailable
 const secureStorage = {
@@ -276,8 +276,6 @@ const secureStorage = {
     }
   },
 };
-
-const memoryStorage: Record<string, string> = {};
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

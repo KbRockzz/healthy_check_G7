@@ -1,5 +1,5 @@
 /**
- * Auth Context — quản lý trạng thái đăng nhập toàn app
+ * Auth Context — quản lý trạng thái đăng nhập toàn app với Supabase
  */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, Profile } from '@/lib/supabase';
@@ -9,7 +9,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any; session?: any }>;
   signOut: () => Promise<void>;
   isProfileComplete: () => boolean;
   refreshProfile: () => Promise<void>;
@@ -23,21 +23,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Kiểm tra session hiện tại
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
+    async function initAuth() {
+      try {
+        const { data: { session: supaSession } } = await supabase.auth.getSession();
+        setSession(supaSession);
+        if (supaSession?.user) {
+          await fetchProfile(supaSession.user.id);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.warn('Lỗi initAuth:', err);
         setLoading(false);
       }
-    });
+    }
 
-    // Lắng nghe thay đổi auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        fetchProfile(session.user.id);
+    initAuth();
+
+    // Lắng nghe thay đổi trạng thái auth từ Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession);
+      if (newSession?.user) {
+        await fetchProfile(newSession.user.id);
       } else {
         setProfile(null);
         setLoading(false);
@@ -56,9 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
-        console.error('Lỗi lấy profile:', error);
-        // Nếu không tìm thấy profile, tự tạo mới
-        if (error.code === 'PGRST116' || error.message?.includes('Results contain 0 rows') || error.message?.includes('404')) {
+        // Nếu không tìm thấy profile, tự tạo profile mặc định
+        if (error.code === 'PGRST116' || error.message?.includes('0 rows') || error.message?.includes('404')) {
           const { error: createError } = await supabase
             .from('profiles')
             .insert({
@@ -66,51 +72,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               full_name: 'User',
               gender: 'unspecified',
             });
-          if (createError) {
-            console.error('Lỗi tạo profile:', createError);
-          } else {
-            // Fetch lại profile vừa tạo
-            const { data: newData, error: fetchError } = await supabase
+          if (!createError) {
+            const { data: newData } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', userId)
               .single();
-            if (!fetchError && newData) {
-              setProfile(newData);
-            }
+            if (newData) setProfile(newData);
           }
         }
         return;
       }
 
-      // Nếu data null (không tìm thấy), tự tạo
-      if (!data) {
-        const { error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            full_name: 'User',
-            gender: 'unspecified',
-          });
-        if (createError) {
-          console.error('Lỗi tạo profile:', createError);
-        } else {
-          // Fetch lại profile vừa tạo
-          const { data: newData, error: fetchError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-          if (!fetchError && newData) {
-            setProfile(newData);
-          }
-        }
-        return;
+      if (data) {
+        setProfile(data);
       }
-
-      setProfile(data);
     } catch (err) {
-      console.error(err);
+      console.warn('Lỗi fetchProfile:', err);
     } finally {
       setLoading(false);
     }
@@ -119,12 +97,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(email: string, password: string) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (!error && data.user) {
-        await fetchProfile(data.user.id);
+      if (!error && data.session) {
+        setSession(data.session);
+        if (data.user) {
+          await fetchProfile(data.user.id);
+        }
+        setLoading(false);
       }
       return { error };
     } catch (err: any) {
-      console.error('Lỗi signin:', err);
+      console.error('Lỗi signIn:', err);
       return { error: err };
     }
   }
@@ -136,15 +118,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         options: { data: { full_name: fullName } },
       });
-      return { error };
+
+      if (!error && data.session) {
+        setSession(data.session);
+        if (data.user) {
+          await fetchProfile(data.user.id);
+        }
+        setLoading(false);
+      }
+      return { error, session: data?.session };
     } catch (err: any) {
-      console.error('Lỗi signup:', err);
+      console.error('Lỗi signUp:', err);
       return { error: err };
     }
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Lỗi signOut:', e);
+    }
+    setSession(null);
     setProfile(null);
   }
 
