@@ -37,14 +37,14 @@ export default function HomeScreen() {
   const [calorieGoal, setCalorieGoal] = useState<number>(2200);
   const [waterMl, setWaterMl] = useState<number>(1600);
   const [waterGoalMl, setWaterGoalMl] = useState<number>(2000);
-  const [healthScore] = useState<number>(88);
+  const [healthScore, setHealthScore] = useState<number>(0);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState<boolean>(false);
   const [showNotificationModal, setShowNotificationModal] = useState<boolean>(false);
   const [showAiModal, setShowAiModal] = useState<boolean>(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (): Promise<void> => {
     if (!session) return;
     const today = new Date().toISOString().split('T')[0];
 
@@ -117,6 +117,19 @@ export default function HomeScreen() {
         setTodaySleepMins(sleepData.total_minutes);
         await AsyncStorage.setItem(sleepKey, sleepData.total_minutes.toString());
       }
+
+      // 5. Fetch health score from dashboard summary
+      const { data: summaryData } = await supabase.rpc('get_dashboard_summary');
+      if (summaryData?.health_score) {
+        setHealthScore(summaryData.health_score.score || 88);
+      } else {
+        // Fallback: calculate approximate score from today's data
+        const stepsScore = Math.min((todaySteps / stepGoal) * 25, 25);
+        const sleepScore = Math.min((todaySleepMins / 480) * 25, 25);
+        const calScore = Math.min((todayCalories / calorieGoal) * 25, 25);
+        const waterScore = Math.min((waterMl / waterGoalMl) * 25, 25);
+        setHealthScore(Math.round(stepsScore + sleepScore + calScore + waterScore));
+      }
     } catch {
       // Keep state values
     }
@@ -147,6 +160,28 @@ export default function HomeScreen() {
     if (profile?.water_goal_ml) setWaterGoalMl(profile.water_goal_ml);
 
     fetchData();
+    
+    // Initial health score fetch
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('get_dashboard_summary');
+        if (data?.health_score) {
+          setHealthScore(data.health_score.score || 88);
+        } else {
+          const stepsScore = Math.min((todaySteps / stepGoal) * 25, 25);
+          const sleepScore = Math.min((todaySleepMins / 480) * 25, 25);
+          const calScore = Math.min((todayCalories / calorieGoal) * 25, 25);
+          const waterScore = Math.min((waterMl / waterGoalMl) * 25, 25);
+          setHealthScore(Math.round(stepsScore + sleepScore + calScore + waterScore));
+        }
+      } catch {
+        const stepsScore = Math.min((todaySteps / stepGoal) * 25, 25);
+        const sleepScore = Math.min((todaySleepMins / 480) * 25, 25);
+        const calScore = Math.min((todayCalories / calorieGoal) * 25, 25);
+        const waterScore = Math.min((waterMl / waterGoalMl) * 25, 25);
+        setHealthScore(Math.round(stepsScore + sleepScore + calScore + waterScore));
+      }
+    })();
   }, [session, profile, authLoading, fetchData]);
 
   const onRefresh = useCallback(() => {

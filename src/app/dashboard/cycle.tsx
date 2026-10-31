@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { supabase } from '@/lib/supabase';
 
 const SYMPTOMS = [
   { id: 'cramps', label: 'Đau bụng', icon: 'flash' },
@@ -33,10 +34,12 @@ export default function CycleScreen() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
 
-  const [currentDay] = useState(14);
+  const [currentDay, setCurrentDay] = useState(14);
   const [cycleLength, setCycleLength] = useState(28);
+  const [periodStart, setPeriodStart] = useState<string>('');
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>(['cramps']);
   const [selectedMood, setSelectedMood] = useState<string>('calm');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -44,8 +47,36 @@ export default function CycleScreen() {
       router.replace('/auth/sign-in');
       return;
     }
+    loadCycleData();
     if (profile?.cycle_length_days) setCycleLength(profile.cycle_length_days);
   }, [session, profile, authLoading]);
+
+  async function loadCycleData() {
+    if (!session) return;
+    try {
+      const { data, error } = await supabase
+        .from('cycle_records')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (error || !data || data.length === 0) return;
+      const rec = data[0];
+      if (rec?.period_start) {
+        setPeriodStart(rec.period_start);
+        const start = new Date(rec.period_start);
+        const today = new Date();
+        const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        const day = ((diffDays % rec.cycle_length) + rec.cycle_length) % rec.cycle_length + 1;
+        setCurrentDay(day);
+        if (rec.cycle_length) setCycleLength(rec.cycle_length);
+      }
+      if (rec?.symptom) setSelectedSymptoms([rec.symptom]);
+      if (rec?.mood) setSelectedMood(rec.mood);
+    } catch { /* ignore */ }
+  }
+
+
 
   const toggleSymptom = (id: string) => {
     setSelectedSymptoms((prev) =>
@@ -54,6 +85,30 @@ export default function CycleScreen() {
   };
 
   const daysToNext = cycleLength - currentDay;
+
+  async function handleSave() {
+    if (!session?.user?.id) return;
+    setSaving(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { error } = await supabase.from('cycle_records').upsert({
+        user_id: session.user.id,
+        period_start: periodStart || today,
+        cycle_length: cycleLength,
+        symptom: selectedSymptoms[0] || null,
+        mood: selectedMood || null,
+        is_predicted: false,
+        notes: null,
+      }, { onConflict: 'user_id' });
+      if (error) throw error;
+      Alert.alert('Đã lưu! 🌸', 'Nhật ký chu kỳ đã được cập nhật lên hệ thống.');
+      await loadCycleData();
+    } catch (err: any) {
+      Alert.alert('Lỗi lưu dữ liệu', err.message || 'Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -168,13 +223,12 @@ export default function CycleScreen() {
 
         {/* Save button */}
         <TouchableOpacity
-          style={styles.saveBtn}
-          onPress={() => {
-            Alert.alert('Đã lưu nhật ký! 🌸', 'Triệu chứng và tâm trạng ngày hôm nay đã được cập nhật.');
-          }}
+          style={[styles.saveBtn, saving && { opacity: 0.7 }]}
+          onPress={handleSave}
+          disabled={saving}
           activeOpacity={0.8}
         >
-          <Text style={styles.saveBtnText}>Lưu ghi nhận thể trạng</Text>
+          <Text style={styles.saveBtnText}>{saving ? 'Đang lưu...' : 'Lưu ghi nhận thể trạng'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

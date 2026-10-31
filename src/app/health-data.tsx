@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { supabase } from '@/lib/supabase';
 import BottomTabBar from '@/components/bottom-tab-bar';
 
 interface MetricRow {
@@ -29,14 +30,26 @@ export default function HealthDataScreen() {
   const [stepsToday, setStepsToday] = useState(6432);
 
   const loadData = useCallback(async () => {
+    if (!session) return;
     try {
       const today = new Date().toISOString().split('T')[0];
-      const savedSteps = await AsyncStorage.getItem(`@healthy_check_steps_${today}`);
-      if (savedSteps) setStepsToday(parseInt(savedSteps, 10));
+      // Steps from Supabase
+      const { data: stepsData } = await supabase
+        .from('step_records')
+        .select('steps')
+        .eq('user_id', session.user.id)
+        .eq('recorded_on', today)
+        .single();
+      if (stepsData?.steps) {
+        setStepsToday(stepsData.steps);
+      } else {
+        const savedSteps = await AsyncStorage.getItem(`@healthy_check_steps_${today}`);
+        if (savedSteps) setStepsToday(parseInt(savedSteps, 10));
+      }
     } catch {
       // keep
     }
-  }, []);
+  }, [session]);
 
   useFocusEffect(
     useCallback(() => {
