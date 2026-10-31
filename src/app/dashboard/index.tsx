@@ -151,10 +151,6 @@ export default function HomeScreen() {
       router.replace('/auth/sign-in');
       return;
     }
-    const name = session.user?.user_metadata?.full_name || profile?.full_name || 'Alex';
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    setUserName(parts.length > 0 ? parts[parts.length - 1] : name);
-
     if (profile?.gender) {
       setUserGender(profile.gender as any);
     }

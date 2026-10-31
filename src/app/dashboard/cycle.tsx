@@ -49,7 +49,6 @@ export default function CycleScreen() {
       return;
     }
     loadCycleData();
-    setLoaded(true);
   }, [session, authLoading]);
 
   async function loadCycleData() {
