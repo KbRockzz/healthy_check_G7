@@ -6,11 +6,11 @@ import * as Font from 'expo-font';
 SplashScreen.preventAutoHideAsync();
 
 const ROBOTO_FONTS = {
-  'Roboto_400Regular': require('../../assets/fonts/Roboto-Regular.ttf'),
-  'Roboto_700Bold': require('../../assets/fonts/Roboto-Bold.ttf'),
-  'Roboto_500Medium': require('../../assets/fonts/Roboto-Medium.ttf'),
-  'Roboto_600SemiBold': require('../../assets/fonts/Roboto-SemiBold.ttf'),
-  'Roboto_300Light': require('../../assets/fonts/Roboto-Light.ttf'),
+  'Roboto_400Regular': require('../../../assets/fonts/Roboto-Regular.ttf'),
+  'Roboto_700Bold': require('../../../assets/fonts/Roboto-Bold.ttf'),
+  'Roboto_500Medium': require('../../../assets/fonts/Roboto-Medium.ttf'),
+  'Roboto_600SemiBold': require('../../../assets/fonts/Roboto-SemiBold.ttf'),
+  'Roboto_300Light': require('../../../assets/fonts/Roboto-Light.ttf'),
 };
 
 export function useSplashScreen() {
