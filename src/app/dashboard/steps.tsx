@@ -105,6 +105,8 @@ export default function StepsScreen() {
         active_minutes: Math.round(nextSteps / 100),
         source: 'manual',
       });
+      // Refresh data to reflect change
+      await fetchData();
     } catch {
       // keep local
     }
