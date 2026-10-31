@@ -38,6 +38,7 @@ export default function SleepScreen() {
   const [loaded, setLoaded] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [entries, setEntries] = useState<SleepEntry[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   // Log form state
   const [inputBedtime, setInputBedtime] = useState('23:00');
@@ -128,17 +129,18 @@ export default function SleepScreen() {
     Alert.alert('Thành công! 🌙', `Đã lưu giấc ngủ: ${Math.floor(totalM / 60)}h ${totalM % 60}m`);
   };
 
-  const hours = Math.floor(todaySleepMins / 60);
-  const minutes = todaySleepMins % 60;
-  const pct = goalMins > 0 ? Math.min(100, Math.round((todaySleepMins / goalMins) * 100)) : 0;
+  const formatDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'Hôm nay';
+    if (d.toDateString() === yesterday.toDateString()) return 'Hôm qua';
+    return d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short' });
+  };
 
-  if (!loaded) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#818CF8" />
-      </View>
-    );
-  }
+  const selectedEntry = entries.find(e => e.sleep_date === selectedDate) || entries[0];
+  const displaySleepMins = selectedEntry ? selectedEntry.total_minutes : todaySleepMins;
 
   // Dynamic colors based on theme
   const theme = {
@@ -173,17 +175,38 @@ export default function SleepScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Date Selector */}
+        <View style={styles.dateSelector}>
+          <Text style={styles.dateSelectorLabel}>Chọn ngày</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
+            {entries.map((entry) => (
+              <TouchableOpacity
+                key={entry.sleep_date}
+                style={[styles.dateChip, selectedDate === entry.sleep_date && styles.dateChipActive]}
+                onPress={() => setSelectedDate(entry.sleep_date)}
+              >
+                <Text style={[styles.dateChipText, selectedDate === entry.sleep_date && styles.dateChipTextActive]}>
+                  {formatDateLabel(entry.sleep_date)}
+                </Text>
+                <Text style={[styles.dateChipSteps, selectedDate === entry.sleep_date && styles.dateChipStepsActive]}>
+                  {Math.floor(entry.total_minutes / 60)}h {entry.total_minutes % 60}m
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Hero Card */}
         <View style={[styles.heroCard, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
           <View style={styles.heroTop}>
             <View>
-              <Text style={[styles.heroDate, { color: theme.textSecondary }]}>Đêm qua • Hôm nay</Text>
+              <Text style={[styles.heroDate, { color: theme.textSecondary }]}>{formatDateLabel(selectedDate)}</Text>
               <Text style={[styles.heroHours, { color: theme.textPrimary }]}>
-                {hours}<Text style={styles.heroUnit}>h </Text>{minutes}<Text style={styles.heroUnit}>m</Text>
+                {Math.floor(displaySleepMins / 60)}<Text style={styles.heroUnit}>h </Text>{displaySleepMins % 60}<Text style={styles.heroUnit}>m</Text>
               </Text>
             </View>
             <View style={styles.qualityCircle}>
-              <Text style={styles.qualityNum}>{pct}%</Text>
+              <Text style={styles.qualityNum}>{goalMins > 0 ? Math.min(100, Math.round((displaySleepMins / goalMins) * 100)) : 0}%</Text>
               <Text style={styles.qualityLabel}>Mục tiêu</Text>
             </View>
           </View>
@@ -343,7 +366,15 @@ export default function SleepScreen() {
 const styles = StyleSheet.create({
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0B0F19' },
   container: { flex: 1 },
-  header: {
+  dateSelector: { paddingHorizontal: 20, marginTop: 8, marginBottom: 12 },
+  dateSelectorLabel: { fontSize: 13, fontWeight: '600', color: '#A5B4FC', marginBottom: 8, fontFamily: FONT_FAMILY.semiBold as string },
+  dateRow: { gap: 8 },
+  dateChip: { backgroundColor: '#1E293B', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: '#334155', alignItems: 'center' },
+  dateChipActive: { backgroundColor: '#6366F1', borderColor: '#6366F1' },
+  dateChipText: { fontSize: 11, fontWeight: '600', color: '#F1F5F9', fontFamily: FONT_FAMILY.semiBold as string },
+  dateChipTextActive: { color: '#FFFFFF' },
+  dateChipSteps: { fontSize: 10, color: '#94A3B8', marginTop: 2, fontFamily: FONT_FAMILY.base as string },
+  dateChipStepsActive: { color: 'rgba(255,255,255,0.8)' },  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

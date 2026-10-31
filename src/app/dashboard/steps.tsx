@@ -33,6 +33,8 @@ export default function StepsScreen() {
   const [loaded, setLoaded] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [customInput, setCustomInput] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const fetchData = useCallback(async () => {
     if (!session) return;
@@ -42,17 +44,33 @@ export default function StepsScreen() {
       const savedSteps = await AsyncStorage.getItem(storageKey);
       if (savedSteps) setSteps(parseInt(savedSteps, 10));
 
-      const { data } = await supabase
+      const { data: todayData } = await supabase
         .from('step_records')
         .select('*')
         .eq('user_id', session.user.id)
         .eq('recorded_on', today)
         .single();
 
-      if (data && data.steps) {
-        setSteps(data.steps);
-        await AsyncStorage.setItem(storageKey, data.steps.toString());
+      if (todayData && todayData.steps) {
+        setSteps(todayData.steps);
+        await AsyncStorage.setItem(storageKey, todayData.steps.toString());
       }
+
+      // Load 7-day history
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      const startDate = sevenDaysAgo.toISOString().split('T')[0];
+
+      const { data: historyData } = await supabase
+        .from('step_records')
+        .select('recorded_on, steps, distance_km, calories_burned')
+        .eq('user_id', session.user.id)
+        .gte('recorded_on', startDate)
+        .lte('recorded_on', today)
+        .order('recorded_on', { ascending: false });
+
+      if (historyData) setHistory(historyData as any[]);
+
       if (profile?.step_goal) setGoal(profile.step_goal);
       setLoaded(true);
     } catch {
@@ -109,6 +127,18 @@ export default function StepsScreen() {
     );
   }
 
+  const formatDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'Hôm nay';
+    if (d.toDateString() === yesterday.toDateString()) return 'Hôm qua';
+    return d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short' });
+  };
+
+  const selectedEntry = history.find((h: any) => h.recorded_on === selectedDate) || { steps: steps, distance_km: parseFloat((steps * 0.0008).toFixed(2)), calories_burned: Math.round(steps * 0.045) };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -123,20 +153,41 @@ export default function StepsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Date Selector */}
+        <View style={styles.dateSelector}>
+          <Text style={styles.dateSelectorLabel}>Chọn ngày</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
+            {history.map((entry: any) => (
+              <TouchableOpacity
+                key={entry.recorded_on}
+                style={[styles.dateChip, selectedDate === entry.recorded_on && styles.dateChipActive]}
+                onPress={() => setSelectedDate(entry.recorded_on)}
+              >
+                <Text style={[styles.dateChipText, selectedDate === entry.recorded_on && styles.dateChipTextActive]}>
+                  {formatDateLabel(entry.recorded_on)}
+                </Text>
+                <Text style={[styles.dateChipSteps, selectedDate === entry.recorded_on && styles.dateChipStepsActive]}>
+                  {entry.steps.toLocaleString()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Hero Card */}
         <View style={styles.heroCard}>
           <View style={styles.heroLeft}>
-            <Text style={styles.heroSub}>Tổng số bước hôm nay</Text>
-            <Text style={styles.heroSteps}>{steps.toLocaleString()}</Text>
+            <Text style={styles.heroSub}>{selectedDate === new Date().toISOString().split('T')[0] ? 'Tổng số bước hôm nay' : formatDateLabel(selectedDate)}</Text>
+            <Text style={styles.heroSteps}>{selectedEntry.steps.toLocaleString()}</Text>
             <Text style={styles.heroGoal}>/ {goal.toLocaleString()} Steps</Text>
             <View style={styles.heroBadge}>
               <Ionicons name="flame" size={12} color="#FFFFFF" />
-              <Text style={styles.heroBadgeText}>{progressPct}% Mục tiêu ngày</Text>
+              <Text style={styles.heroBadgeText}>{Math.round((selectedEntry.steps / goal) * 100)}% Mục tiêu ngày</Text>
             </View>
           </View>
 
           <View style={styles.progressRing}>
-            <Text style={styles.ringVal}>{progressPct}%</Text>
+            <Text style={styles.ringVal}>{Math.round((selectedEntry.steps / goal) * 100)}%</Text>
             <Text style={styles.ringLabel}>Completed</Text>
           </View>
         </View>
@@ -145,19 +196,19 @@ export default function StepsScreen() {
         <View style={styles.metricsRow}>
           <View style={styles.metricPill}>
             <Ionicons name="navigate-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.pillValue}>{distanceKm} km</Text>
+            <Text style={styles.pillValue}>{parseFloat((selectedEntry.steps * 0.0008).toFixed(2))} km</Text>
             <Text style={styles.pillLabel}>Quãng đường</Text>
           </View>
 
           <View style={styles.metricPill}>
             <Ionicons name="flame-outline" size={20} color="#F59E0B" />
-            <Text style={styles.pillValue}>{caloriesBurned} kcal</Text>
+            <Text style={styles.pillValue}>{selectedEntry.calories_burned || Math.round(selectedEntry.steps * 0.045)} kcal</Text>
             <Text style={styles.pillLabel}>Calo tiêu hao</Text>
           </View>
 
           <View style={styles.metricPill}>
             <Ionicons name="time-outline" size={20} color="#10B981" />
-            <Text style={styles.pillValue}>{activeMins} mins</Text>
+            <Text style={styles.pillValue}>{Math.round(selectedEntry.steps / 120)} mins</Text>
             <Text style={styles.pillLabel}>Vận động</Text>
           </View>
         </View>
@@ -258,6 +309,15 @@ export default function StepsScreen() {
 const styles = StyleSheet.create({
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   container: { flex: 1, backgroundColor: COLORS.bg },
+  dateSelector: { paddingHorizontal: 20, marginTop: 8, marginBottom: 12 },
+  dateSelectorLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 8, fontFamily: FONT_FAMILY.semiBold as string },
+  dateRow: { gap: 8 },
+  dateChip: { backgroundColor: COLORS.card, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  dateChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  dateChipText: { fontSize: 11, fontWeight: '600', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.semiBold as string },
+  dateChipTextActive: { color: '#FFFFFF' },
+  dateChipSteps: { fontSize: 10, color: COLORS.textTertiary, marginTop: 2, fontFamily: FONT_FAMILY.base as string },
+  dateChipStepsActive: { color: 'rgba(255,255,255,0.8)' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

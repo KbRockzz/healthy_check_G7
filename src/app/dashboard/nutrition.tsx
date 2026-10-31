@@ -57,13 +57,27 @@ export default function NutritionScreen() {
   const mealTypeLabels = { breakfast: '🌅 Sáng', lunch: '☀️ Trưa', dinner: '🌙 Tối', snack: '🍎 Phụ' };
   const [entries, setEntries] = useState<MealEntry[]>([]);
 
-  // Manual Form
+  // Selected date for history
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
+  // Manual Form state
   const [foodName, setFoodName] = useState('');
   const [calInput, setCalInput] = useState('');
-  const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
+  const [mealType, setMealTypeState] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
   const [proteinInput, setProteinInput] = useState('');
   const [carbsInput, setCarbsInput] = useState('');
   const [fatInput, setFatInput] = useState('');
+
+  // Format date label helper
+  const formatDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'Hôm nay';
+    if (d.toDateString() === yesterday.toDateString()) return 'Hôm qua';
+    return d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'short' });
+  };
 
   const fetchData = useCallback(async () => {
     if (!session) return;
@@ -73,24 +87,32 @@ export default function NutritionScreen() {
       const savedCal = await AsyncStorage.getItem(storageKey);
       if (savedCal) setCalories(parseInt(savedCal, 10));
 
+      // Load 7 days of data
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      const startDate = sevenDaysAgo.toISOString().split('T')[0];
+
       const { data } = await supabase
         .from('nutrition_logs')
         .select('*')
         .eq('user_id', session.user.id)
-        .eq('logged_on', today)
-        .order('created_at', { ascending: false });
+        .gte('logged_on', startDate)
+        .lte('logged_on', today)
+        .order('logged_on', { ascending: false });
 
       if (data && data.length > 0) {
-        const totalCal = data.reduce((sum, item) => sum + (item.calories || 0), 0);
-        const totalProtein = data.reduce((sum, item) => sum + (item.protein_g || 0), 0);
-        const totalCarbs = data.reduce((sum, item) => sum + (item.carbs_g || 0), 0);
-        const totalFat = data.reduce((sum, item) => sum + (item.fat_g || 0), 0);
-        
+        // Filter for selected date
+        const todayData = data.filter((d: MealEntry) => d.logged_on === selectedDate);
+        const totalCal = todayData.reduce((sum: number, item: MealEntry) => sum + (item.calories || 0), 0);
+        const totalProtein = todayData.reduce((sum: number, item: MealEntry) => sum + (item.protein_g || 0), 0);
+        const totalCarbs = todayData.reduce((sum: number, item: MealEntry) => sum + (item.carbs_g || 0), 0);
+        const totalFat = todayData.reduce((sum: number, item: MealEntry) => sum + (item.fat_g || 0), 0);
+
         setCalories(totalCal);
         setProtein(totalProtein);
         setCarbs(totalCarbs);
         setFat(totalFat);
-        setEntries(data as MealEntry[]);
+        setEntries(todayData);
         await AsyncStorage.setItem(storageKey, totalCal.toString());
       } else {
         setProtein(0);
@@ -105,7 +127,7 @@ export default function NutritionScreen() {
       setLoaded(true);
       // keep state
     }
-  }, [session, profile]);
+  }, [session, profile, selectedDate]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -146,6 +168,9 @@ export default function NutritionScreen() {
     setShowAddModal(false);
     setFoodName('');
     setCalInput('');
+    setProteinInput('');
+    setCarbsInput('');
+    setFatInput('');
     Alert.alert('Đã thêm bữa ăn! 🥗', `${food.name} (+${food.cal} kcal)`);
   };
 
@@ -196,10 +221,34 @@ export default function NutritionScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Date Selector */}
+        <View style={styles.dateSelector}>
+          <Text style={styles.dateSelectorLabel}>Chọn ngày</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
+            {Array.from({ length: 7 }, (_, i) => {
+              const d = new Date();
+              d.setDate(d.getDate() - i);
+              const dateStr = d.toISOString().split('T')[0];
+              return (
+                <TouchableOpacity
+                  key={dateStr}
+                  style={[styles.dateChip, selectedDate === dateStr && styles.dateChipActive]}
+                  onPress={() => setSelectedDate(dateStr)}
+                >
+                  <Text style={[styles.dateChipText, selectedDate === dateStr && styles.dateChipTextActive]}>
+                    {formatDateLabel(dateStr)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {/* Calorie Hero Card */}
         <View style={styles.heroCard}>
           <View style={styles.heroLeft}>
             <Text style={styles.heroTitle}>Calorie Budget</Text>
+            <Text style={styles.heroSubText}>{formatDateLabel(selectedDate)}</Text>
             <Text style={styles.heroCalNum}>{calories.toLocaleString()}</Text>
             <Text style={styles.heroTarget}>/ {goal.toLocaleString()} kcal</Text>
             <View style={styles.remainingPill}>
@@ -255,7 +304,7 @@ export default function NutritionScreen() {
 
         {/* Meal Categories - chỉ hiển thị khi có dữ liệu */}
         <Text style={styles.sectionTitle}>Các bữa ăn trong ngày</Text>
-        
+
         {entries.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="restaurant-outline" size={48} color={COLORS.textTertiary} />
@@ -334,7 +383,7 @@ export default function NutritionScreen() {
                 <TouchableOpacity
                   key={type}
                   style={[styles.mealTypeBtn, mealType === type && styles.mealTypeBtnActive]}
-                  onPress={() => setMealType(type)}
+                  onPress={() => setMealTypeState(type)}
                 >
                   <Text style={[styles.mealTypeText, mealType === type && styles.mealTypeTextActive]}>
                     {mealTypeLabels[type]}
@@ -428,6 +477,13 @@ const styles = StyleSheet.create({
   mealTypeText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string },
   mealTypeTextActive: { color: '#FFFFFF' },
   container: { flex: 1, backgroundColor: COLORS.bg },
+  dateSelector: { paddingHorizontal: 20, marginTop: 8, marginBottom: 12 },
+  dateSelectorLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 8, fontFamily: FONT_FAMILY.semiBold as string },
+  dateRow: { gap: 8 },
+  dateChip: { backgroundColor: COLORS.surface, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  dateChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  dateChipText: { fontSize: 11, fontWeight: '600', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.semiBold as string },
+  dateChipTextActive: { color: '#FFFFFF' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -463,6 +519,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: FONT_FAMILY.semiBold as string,
   },
+  heroSubText: { fontSize: 12, color: '#B45309', fontFamily: FONT_FAMILY.base as string, marginBottom: 2 },
   heroCalNum: {
     fontSize: 36,
     fontWeight: '900',
