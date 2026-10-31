@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
+import { COLORS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 
@@ -32,7 +32,7 @@ const MOODS = [
 
 export default function CycleScreen() {
   const router = useRouter();
-  const { session, profile, loading: authLoading } = useAuth();
+  const { session, loading: authLoading } = useAuth();
 
   const [currentDay, setCurrentDay] = useState<number>(0);
   const [cycleLength, setCycleLength] = useState<number>(28);
