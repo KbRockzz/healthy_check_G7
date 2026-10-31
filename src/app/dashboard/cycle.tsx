@@ -141,18 +141,27 @@ export default function CycleScreen() {
         <View style={styles.heroCard}>
           <View style={styles.cycleCircleWrap}>
             <View style={styles.cycleCircle}>
-              <Text style={styles.cycleDayNum}>Day {currentDay}</Text>
-              <Text style={styles.cycleTotal}>/ {cycleLength} ngày</Text>
+              <Text style={styles.cycleDayNum}>{currentDay > 0 ? 'Day ' + currentDay : '-'}</Text>
+              <Text style={styles.cycleTotal}>{currentDay > 0 ? '/ ' + cycleLength + ' ngày' : ''}</Text>
             </View>
           </View>
 
-          <View style={styles.statusPill}>
-            <Ionicons name="sparkles" size={14} color="#BE185D" />
-            <Text style={styles.statusPillText}>Cửa sổ rụng trứng (Ovulation Window)</Text>
-          </View>
+          {currentDay > 0 ? (
+            <View style={styles.statusPill}>
+              <Ionicons name="sparkles" size={14} color="#BE185D" />
+              <Text style={styles.statusPillText}>Cửa sổ rụng trứng (Ovulation Window)</Text>
+            </View>
+          ) : (
+            <View style={styles.statusPill}>
+              <Ionicons name="help-circle" size={14} color="#9CA3AF" />
+              <Text style={[styles.statusPillText, { color: '#9CA3AF' }]}>Chưa có dữ liệu chu kỳ</Text>
+            </View>
+          )}
 
           <Text style={styles.heroSummary}>
-            Khả năng thụ thai cao hôm nay. Kỳ kinh tiếp theo dự kiến trong <Text style={{ fontWeight: 'bold' }}>{daysToNext} ngày</Text>.
+            {currentDay > 0 
+              ? 'Khả năng thụ thai cao hôm nay. Kỳ kinh tiếp theo dự kiến trong ' + daysToNext + ' ngày.'
+              : 'Bắt đầu ghi nhận chu kỳ kinh để theo dõi sức khỏe sinh sản.'}
           </Text>
         </View>
 

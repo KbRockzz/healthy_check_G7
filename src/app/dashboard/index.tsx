@@ -459,35 +459,15 @@ export default function HomeScreen() {
             </TouchableOpacity>
         </View>
 
-        {/* Quick Links Banner */}
-        <View style={styles.quickBannerRow}>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={() => router.push('/health-data')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="analytics" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.quickActionText}>All Health Data</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionBtn, { borderColor: '#10B981' }]}
-            onPress={() => router.push('/settings/goals')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="flag" size={18} color="#10B981" style={{ marginRight: 6 }} />
-            <Text style={[styles.quickActionText, { color: '#10B981' }]}>Mục tiêu (Goals)</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionBtn, { borderColor: '#8B5CF6' }]}
-            onPress={() => router.push('/share')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="share-social" size={18} color="#8B5CF6" style={{ marginRight: 6 }} />
-            <Text style={[styles.quickActionText, { color: '#8B5CF6' }]}>Chia sẻ</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Goals Button */}
+        <TouchableOpacity
+          style={styles.goalsBtn}
+          onPress={() => router.push('/settings/goals')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="flag" size={22} color="#FFFFFF" style={{ marginRight: 10 }} />
+          <Text style={styles.goalsBtnText}>Thiết lập Mục tiêu</Text>
+        </TouchableOpacity>
 
       </ScrollView>
 
@@ -994,7 +974,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: FONT_FAMILY.semiBold as string,
   },
-  quickBannerRow: {
+  goalsBtn: {
+        backgroundColor: '#10B981',
+        borderRadius: 28,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 20,
+        ...SHADOWS.md,
+      },
+      goalsBtnText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        fontFamily: FONT_FAMILY.bold as string,
+        color: '#FFFFFF',
+      },
+      quickBannerRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     marginTop: 20,

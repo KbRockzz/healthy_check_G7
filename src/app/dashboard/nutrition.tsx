@@ -51,12 +51,19 @@ export default function NutritionScreen() {
   const [loaded, setLoaded] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Meal type selector
+  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+  const mealTypeLabels = { breakfast: '🌅 Sáng', lunch: '☀️ Trưa', dinner: '🌙 Tối', snack: '🍎 Phụ' };
   const [entries, setEntries] = useState<MealEntry[]>([]);
 
   // Manual Form
   const [foodName, setFoodName] = useState('');
   const [calInput, setCalInput] = useState('');
-  const [mealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
+  const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
+  const [proteinInput, setProteinInput] = useState('');
+  const [carbsInput, setCarbsInput] = useState('');
+  const [fatInput, setFatInput] = useState('');
 
   const fetchData = useCallback(async () => {
     if (!session) return;
@@ -83,11 +90,13 @@ export default function NutritionScreen() {
         setProtein(totalProtein);
         setCarbs(totalCarbs);
         setFat(totalFat);
+        setEntries(data as MealEntry[]);
         await AsyncStorage.setItem(storageKey, totalCal.toString());
       } else {
         setProtein(0);
         setCarbs(0);
         setFat(0);
+        setEntries([]);
       }
 
       if (profile?.calorie_goal) setGoal(profile.calorie_goal);
@@ -318,6 +327,22 @@ export default function NutritionScreen() {
               ))}
             </ScrollView>
 
+            {/* Meal Type Selector */}
+            <Text style={styles.presetHeading}>Chọn bữa ăn</Text>
+            <View style={styles.mealTypeRow}>
+              {mealTypes.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[styles.mealTypeBtn, mealType === type && styles.mealTypeBtnActive]}
+                  onPress={() => setMealType(type)}
+                >
+                  <Text style={[styles.mealTypeText, mealType === type && styles.mealTypeTextActive]}>
+                    {mealTypeLabels[type]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             {/* Manual Form */}
             <Text style={[styles.presetHeading, { marginTop: 14 }]}>Hoặc nhập thủ công</Text>
             <View style={styles.formGroup}>
@@ -336,6 +361,32 @@ export default function NutritionScreen() {
                 onChangeText={setCalInput}
                 keyboardType="numeric"
               />
+              <View style={styles.macroInputs}>
+                <TextInput
+                  style={[styles.textInput, styles.macroInput]}
+                  placeholder="Protein (g)"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={proteinInput}
+                  onChangeText={setProteinInput}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={[styles.textInput, styles.macroInput]}
+                  placeholder="Carbs (g)"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={carbsInput}
+                  onChangeText={setCarbsInput}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={[styles.textInput, styles.macroInput]}
+                  placeholder="Fat (g)"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={fatInput}
+                  onChangeText={setFatInput}
+                  keyboardType="numeric"
+                />
+              </View>
 
               <TouchableOpacity
                 style={styles.submitBtn}
@@ -347,9 +398,9 @@ export default function NutritionScreen() {
                   handleAddMeal({
                     name: foodName,
                     cal: parseInt(calInput) || 300,
-                    p: 15,
-                    c: 35,
-                    f: 8,
+                    p: parseInt(proteinInput) || 15,
+                    c: parseInt(carbsInput) || 35,
+                    f: parseInt(fatInput) || 8,
                     meal: mealType,
                   });
                 }}
@@ -369,6 +420,13 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 40 },
   emptyText: { fontSize: 16, fontWeight: 'bold', color: COLORS.textSecondary, marginTop: 12, fontFamily: FONT_FAMILY.bold as string },
   emptySubtext: { fontSize: 13, color: COLORS.textTertiary, textAlign: 'center', marginTop: 4, fontFamily: FONT_FAMILY.base as string },
+  macroInputs: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  macroInput: { flex: 1 },
+  mealTypeRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  mealTypeBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', backgroundColor: COLORS.surface },
+  mealTypeBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  mealTypeText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string },
+  mealTypeTextActive: { color: '#FFFFFF' },
   container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row',
