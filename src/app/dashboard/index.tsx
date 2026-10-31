@@ -382,7 +382,7 @@ export default function HomeScreen() {
               <View style={[styles.metricIconWrap, { backgroundColor: '#F3E8FF' }]}>
                 <Ionicons name="moon" size={22} color="#8B5CF6" />
               </View>
-              <Text style={[styles.metricProgressText, { color: '#8B5CF6' }]}>94%</Text>
+              <Text style={[styles.metricProgressText, { color: '#8B5CF6' }]}>{goalMins > 0 ? Math.min(100, Math.round((todaySleepMins / goalMins) * 100)) : 0}%</Text>
             </View>
             <Text style={styles.metricTitle}>Sleep</Text>
             <Text style={styles.metricValue}>{Math.floor(todaySleepMins / 60)}h {todaySleepMins % 60}m</Text>
@@ -402,7 +402,7 @@ export default function HomeScreen() {
               <View style={[styles.metricIconWrap, { backgroundColor: '#FEF3C7' }]}>
                 <Ionicons name="restaurant" size={22} color="#D97706" />
               </View>
-              <Text style={[styles.metricProgressText, { color: '#D97706' }]}>84%</Text>
+              <Text style={[styles.metricProgressText, { color: '#D97706' }]}>{calorieGoal > 0 ? Math.min(100, Math.round((todayCalories / calorieGoal) * 100)) : 0}%</Text>
             </View>
             <Text style={styles.metricTitle}>Nutrition</Text>
             <Text style={styles.metricValue}>{todayCalories} kcal</Text>

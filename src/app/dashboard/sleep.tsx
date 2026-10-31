@@ -121,6 +121,8 @@ export default function SleepScreen() {
         rem_minutes: remM,
         quality_score: Math.min(100, Math.round((totalM / goalMins) * 100)),
       });
+      // Refresh data to reflect change
+      await fetchData();
     } catch {
       // local update persisted
     }

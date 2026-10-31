@@ -161,6 +161,8 @@ export default function NutritionScreen() {
         carbs_g: food.c,
         fat_g: food.f,
       });
+      // Refresh data to reflect change
+      await fetchData();
     } catch {
       // local update persisted
     }
