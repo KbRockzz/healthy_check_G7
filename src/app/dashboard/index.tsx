@@ -501,7 +501,7 @@ export default function HomeScreen() {
                   <Text style={styles.breakdownVal}>22 / 25 điểm</Text>
                 </View>
                 <View style={styles.barBg}>
-                  <View style={[styles.barFill, { width: '88%', backgroundColor: '#D97706' }]} />
+                  <View style={[styles.barFill, { width: `${healthScore}%`, backgroundColor: '#D97706' }]} />
                 </View>
               </View>
 
