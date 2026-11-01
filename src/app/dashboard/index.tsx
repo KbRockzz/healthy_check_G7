@@ -122,7 +122,7 @@ export default function HomeScreen() {
       // 5. Fetch health score from dashboard summary
       const { data: summaryData } = await supabase.rpc('get_dashboard_summary');
       if (summaryData?.health_score) {
-        setHealthScore(summaryData.health_score.score || 88);
+        setHealthScore(summaryData.health_score.score || 0);
       } else {
         // Fallback: calculate approximate score from today's data
         const stepsScore = Math.min((todaySteps / stepGoal) * 25, 25);
@@ -151,6 +151,9 @@ export default function HomeScreen() {
       router.replace('/auth/sign-in');
       return;
     }
+    const name = session.user?.user_metadata?.full_name || profile?.full_name || 'Alex';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    setUserName(parts.length > 0 ? parts[parts.length - 1] : name);
     if (profile?.gender) {
       setUserGender(profile.gender as any);
     }
@@ -465,7 +468,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.modalHeroScore}>
-              <Text style={styles.modalBigScore}>88</Text>
+              <Text style={styles.modalBigScore}>{healthScore}</Text>
               <Text style={styles.modalScoreStatus}>Tình trạng Xuất sắc</Text>
               <Text style={styles.modalScoreTip}>Bạn cao hơn 82% người dùng cùng độ tuổi</Text>
             </View>
