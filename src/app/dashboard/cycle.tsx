@@ -407,9 +407,9 @@ export default function CycleScreen() {
                 disabled={d.isInPeriod || d.isPeriodStart}
               >
                 <Text style={[styles.dayCircleText, d.isPeriodStart && styles.dayCircleTextActive, selectedDayIndex === idx && styles.dayCircleTextSelected]}>
-                  {d.isToday ? 'Hn' : `${d.day}`}
+                  {d.day}
                 </Text>
-                {!d.isToday && <Text style={[styles.dayCircleSub, d.isPeriodStart && styles.dayCircleSubActive, selectedDayIndex === idx && styles.dayCircleSubSelected]}>{d.month}</Text>}
+                <Text style={[styles.dayCircleSub, d.isPeriodStart && styles.dayCircleSubActive, selectedDayIndex === idx && styles.dayCircleSubSelected]}>{d.month}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
