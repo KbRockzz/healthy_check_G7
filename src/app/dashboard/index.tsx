@@ -128,10 +128,11 @@ export default function HomeScreen() {
       // 5. Fetch cycle data if female
       if (isFemale && session.user?.id) {
         const { data: cycleData } = await supabase
-          .from('cycle_records')
+          .from('cycle_periods')
           .select('*')
           .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
+          .eq('is_predicted', false)
+          .order('period_start', { ascending: false })
           .limit(1);
 
         if (cycleData?.[0]?.period_start) {
