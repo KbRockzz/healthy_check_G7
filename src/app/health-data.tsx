@@ -20,7 +20,7 @@ interface MetricRow {
   unit: string;
   icon: string;
   color: string;
-  category: 'activity' | 'body';
+  category: 'activity' | 'body' | 'nutrition' | 'cycle';
   targetRoute?: string;
 }
 
@@ -28,13 +28,17 @@ export default function HealthDataScreen() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
   const [stepsToday, setStepsToday] = useState<number>(0);
+  const [waterToday, setWaterToday] = useState<number>(0);
+  const [sleepMins, setSleepMins] = useState<number>(480);
+  const [cycleInfo, setCycleInfo] = useState<{ day: number; length: number; status: string }>({ day: 1, length: 28, status: 'An toàn' });
   const [loaded, setLoaded] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!session) return;
     try {
       const today = new Date().toISOString().split('T')[0];
-      // Steps from Supabase
+
+      // 1. Steps
       const { data: stepsData } = await supabase
         .from('step_records')
         .select('steps')
@@ -47,12 +51,49 @@ export default function HealthDataScreen() {
         const savedSteps = await AsyncStorage.getItem(`@healthy_check_steps_${today}`);
         if (savedSteps) setStepsToday(parseInt(savedSteps, 10));
       }
+
+      // 2. Water
+      const savedWater = await AsyncStorage.getItem(`@healthy_check_water_${today}`);
+      if (savedWater) setWaterToday(parseInt(savedWater, 10));
+
+      // 3. Sleep
+      const { data: sleepData } = await supabase
+        .from('sleep_records')
+        .select('total_minutes')
+        .eq('user_id', session.user.id)
+        .order('sleep_date', { ascending: false })
+        .limit(1);
+      if (sleepData && sleepData.length > 0) {
+        setSleepMins(sleepData[0].total_minutes);
+      }
+
+      // 4. Cycle
+      const { data: periodData } = await supabase
+        .from('cycle_periods')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('is_predicted', false)
+        .order('period_start', { ascending: false })
+        .limit(1);
+
+      if (periodData && periodData.length > 0) {
+        const p = periodData[0];
+        const start = new Date(p.period_start);
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        const len = p.cycle_length || 28;
+        const day = ((diffDays % len) + len) % len + 1;
+        const isPeriod = day <= 5;
+        const isOvulation = day >= (len - 14) && day <= (len - 10);
+        const status = isPeriod ? 'Hành kinh' : isOvulation ? 'Rụng trứng' : 'An toàn';
+        setCycleInfo({ day, length: len, status });
+      }
+
       setLoaded(true);
     } catch {
       setLoaded(true);
-      // keep
     }
-  }, [session, setLoaded]);
+  }, [session]);
 
   useFocusEffect(
     useCallback(() => {
@@ -69,19 +110,58 @@ export default function HealthDataScreen() {
     loadData();
   }, [session, authLoading, loadData, setLoaded]);
 
-  // Tính toán BMI từ profile thực tế
+  // Tính toán chỉ số sinh học bổ sung
   const height = profile?.height_cm || 168;
   const weight = profile?.weight_kg || 58;
   const hM = height / 100;
   const realBmi = (weight / (hM * hM)).toFixed(1);
   const distanceKm = (stepsToday * 0.00075).toFixed(1);
 
+  // BMR Mifflin-St Jeor (male default or profile gender)
+  const isMale = profile?.gender !== 'female';
+  const age = 25; // default
+  const bmr = isMale
+    ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
+    : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
+
+  // TDEE estimate based on steps
+  const activityMultiplier = stepsToday > 10000 ? 1.55 : stepsToday > 5000 ? 1.375 : 1.2;
+  const tdee = Math.round(bmr * activityMultiplier);
+
+  // Water target: weight * 40ml
+  const waterGoal = Math.round(weight * 40);
+
+  // Activity level classification
+  const activityLevel = stepsToday > 10000 ? 'Năng động' : stepsToday > 5000 ? 'Trung bình' : 'Ít vận động';
+
+  // Sleep score: 8 hours (480 mins) = 100%
+  const sleepScore = Math.min(100, Math.round((sleepMins / 480) * 100));
+
+  // Health Score (0 - 100)
+  const stepScoreComp = Math.min(30, Math.round((stepsToday / 10000) * 30));
+  const sleepScoreComp = Math.min(30, Math.round((sleepScore / 100) * 30));
+  const waterScoreComp = Math.min(20, Math.round((waterToday / waterGoal) * 20));
+  const nutritionScoreComp = 20; // default healthy baseline
+  const healthScore = stepScoreComp + sleepScoreComp + waterScoreComp + nutritionScoreComp;
+
   const metrics: MetricRow[] = [
-    { label: 'Chỉ số khối cơ thể (BMI)', value: realBmi, unit: 'Chuẩn', icon: 'fitness', color: '#10B981', category: 'body', targetRoute: '/profile' },
+    // Body
+    { label: 'Chỉ số khối cơ thể (BMI)', value: realBmi, unit: realBmi < '18.5' ? 'Thiếu cân' : realBmi <= '24.9' ? 'Chuẩn' : 'Thừa cân', icon: 'fitness', color: '#10B981', category: 'body', targetRoute: '/profile' },
     { label: 'Cân nặng', value: weight.toString(), unit: 'kg', icon: 'scale', color: '#8B5CF6', category: 'body', targetRoute: '/profile' },
     { label: 'Chiều cao', value: height.toString(), unit: 'cm', icon: 'resize', color: '#059669', category: 'body', targetRoute: '/profile' },
-    { label: 'Năng lượng chuyển hóa nghỉ (BMR)', value: '1,420', unit: 'kcal', icon: 'flame', color: '#D97706', category: 'activity', targetRoute: '/dashboard/nutrition' },
-    { label: 'Khoảng cách đi bộ hôm nay', value: distanceKm, unit: 'km', icon: 'walk', color: COLORS.primary, category: 'activity', targetRoute: '/dashboard/steps' },
+
+    // Nutrition & Metabolism
+    { label: 'BMR (Năng lượng nghỉ)', value: bmr.toLocaleString(), unit: 'kcal', icon: 'flame', color: '#D97706', category: 'nutrition', targetRoute: '/dashboard/nutrition' },
+    { label: 'TDEE (Tổng năng lượng tiêu hao)', value: tdee.toLocaleString(), unit: 'kcal', icon: 'flash', color: '#EA580C', category: 'nutrition', targetRoute: '/dashboard/nutrition' },
+    { label: 'Cân bằng nước lý tưởng', value: `${waterToday} / ${waterGoal}`, unit: 'ml', icon: 'water', color: '#0284C7', category: 'nutrition', targetRoute: '/dashboard/water' },
+
+    // Activity & Sleep
+    { label: 'Mức độ vận động', value: activityLevel, unit: `${stepsToday.toLocaleString()} bước`, icon: 'walk', color: COLORS.primary, category: 'activity', targetRoute: '/dashboard/steps' },
+    { label: 'Khoảng cách đi bộ', value: distanceKm, unit: 'km', icon: 'navigate', color: '#2563EB', category: 'activity', targetRoute: '/dashboard/steps' },
+    { label: 'Điểm chất lượng giấc ngủ', value: sleepScore.toString(), unit: '/100 đ', icon: 'moon', color: '#7C3AED', category: 'activity', targetRoute: '/dashboard/sleep' },
+
+    // Cycle & Women Health
+    { label: 'Chu kỳ kinh nguyệt', value: `Ngày ${cycleInfo.day}`, unit: cycleInfo.status, icon: 'heart', color: '#DB2777', category: 'cycle', targetRoute: '/dashboard/cycle' },
   ];
 
   const handleMetricPress = (m: MetricRow) => {
@@ -90,8 +170,10 @@ export default function HealthDataScreen() {
     }
   };
 
+  const nutrition = metrics.filter((m) => m.category === 'nutrition');
   const body = metrics.filter((m) => m.category === 'body');
   const activity = metrics.filter((m) => m.category === 'activity');
+  const cycle = metrics.filter((m) => m.category === 'cycle');
 
   if (!loaded) {
     return (
@@ -139,24 +221,37 @@ export default function HealthDataScreen() {
           </TouchableOpacity>
         </ScrollView>
 
+        {/* Health Score Card */}
+        <View style={styles.scoreCard}>
+          <Text style={styles.scoreLabel}>Điểm sức khỏe hôm nay</Text>
+          <Text style={styles.scoreValue}>{healthScore}/100</Text>
+          <View style={styles.scoreBar}><View style={[styles.scoreFill, { width: `${healthScore}%` }]} /></View>
+        </View>
+
         {/* Section: Body Measurements */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Số đo cơ thể (Body Measurements)</Text>
+          <Text style={styles.sectionTitle}>Số đo cơ thể</Text>
           <View style={styles.card}>
             {body.map((m, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[styles.row, idx === body.length - 1 && { borderBottomWidth: 0 }]}
-                onPress={() => handleMetricPress(m)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconWrap, { backgroundColor: m.color + '15' }]}>
-                  <Ionicons name={m.icon as any} size={20} color={m.color} />
-                </View>
+              <TouchableOpacity key={idx} style={[styles.row, idx === body.length - 1 && { borderBottomWidth: 0 }]} onPress={() => handleMetricPress(m)} activeOpacity={0.7}>
+                <View style={[styles.iconWrap, { backgroundColor: m.color + '15' }]}><Ionicons name={m.icon as any} size={20} color={m.color} /></View>
                 <Text style={styles.rowLabel}>{m.label}</Text>
-                <Text style={styles.rowValue}>
-                  {m.value} <Text style={styles.unitText}>{m.unit}</Text>
-                </Text>
+                <Text style={styles.rowValue}>{m.value} <Text style={styles.unitText}>{m.unit}</Text></Text>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Section: Nutrition */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Dinh dưỡng & Chuyển hóa</Text>
+          <View style={styles.card}>
+            {nutrition.map((m, idx) => (
+              <TouchableOpacity key={idx} style={[styles.row, idx === nutrition.length - 1 && { borderBottomWidth: 0 }]} onPress={() => handleMetricPress(m)} activeOpacity={0.7}>
+                <View style={[styles.iconWrap, { backgroundColor: m.color + '15' }]}><Ionicons name={m.icon as any} size={20} color={m.color} /></View>
+                <Text style={styles.rowLabel}>{m.label}</Text>
+                <Text style={styles.rowValue}>{m.value} <Text style={styles.unitText}>{m.unit}</Text></Text>
                 <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             ))}
@@ -165,22 +260,28 @@ export default function HealthDataScreen() {
 
         {/* Section: Activity */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chuyển hóa & Hoạt động (Activity)</Text>
+          <Text style={styles.sectionTitle}>Hoạt động & Thể trạng</Text>
           <View style={styles.card}>
             {activity.map((m, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[styles.row, idx === activity.length - 1 && { borderBottomWidth: 0 }]}
-                onPress={() => handleMetricPress(m)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconWrap, { backgroundColor: m.color + '15' }]}>
-                  <Ionicons name={m.icon as any} size={20} color={m.color} />
-                </View>
+              <TouchableOpacity key={idx} style={[styles.row, idx === activity.length - 1 && { borderBottomWidth: 0 }]} onPress={() => handleMetricPress(m)} activeOpacity={0.7}>
+                <View style={[styles.iconWrap, { backgroundColor: m.color + '15' }]}><Ionicons name={m.icon as any} size={20} color={m.color} /></View>
                 <Text style={styles.rowLabel}>{m.label}</Text>
-                <Text style={styles.rowValue}>
-                  {m.value} <Text style={styles.unitText}>{m.unit}</Text>
-                </Text>
+                <Text style={styles.rowValue}>{m.value} <Text style={styles.unitText}>{m.unit}</Text></Text>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Section: Cycle */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sức khỏe phụ nữ</Text>
+          <View style={styles.card}>
+            {cycle.map((m, idx) => (
+              <TouchableOpacity key={idx} style={[styles.row, idx === cycle.length - 1 && { borderBottomWidth: 0 }]} onPress={() => handleMetricPress(m)} activeOpacity={0.7}>
+                <View style={[styles.iconWrap, { backgroundColor: m.color + '15' }]}><Ionicons name={m.icon as any} size={20} color={m.color} /></View>
+                <Text style={styles.rowLabel}>{m.label}</Text>
+                <Text style={styles.rowValue}>{m.value} <Text style={styles.unitText}>{m.unit}</Text></Text>
                 <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             ))}
@@ -235,6 +336,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: FONT_FAMILY.semiBold as string,
   },
+  scoreCard: { backgroundColor: COLORS.primary, borderRadius: 20, padding: 20, marginBottom: 20, alignItems: 'center' },
+  scoreLabel: { color: 'white', fontSize: 13, marginBottom: 4 },
+  scoreValue: { color: 'white', fontSize: 32, fontWeight: 'bold' },
+  scoreBar: { width: '100%', height: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4, marginTop: 12 },
+  scoreFill: { height: '100%', backgroundColor: 'white', borderRadius: 4 },
   card: {
     backgroundColor: COLORS.card,
     borderRadius: 20,
