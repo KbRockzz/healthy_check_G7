@@ -1,12 +1,11 @@
 /**
  * Màn hình Cycle Tracker - Theo dõi chu kỳ, Nhật ký hàng ngày
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, TextInput, Modal, Platform, useRef,
-} from 'react';
-import { StyleSheet } from 'react-native';
+  Alert, ActivityIndicator, TextInput, Modal, Platform, StyleSheet,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -92,7 +91,7 @@ export default function CycleScreen() {
   const [showEndPicker, setShowEndPicker] = useState(false);
 
   // Day selector state
-  const daySelectorRef = useRef<ScrollView>(null);
+  const daySelectorRef = useRef<any>(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(14); // default to today
 
   // Fetch cycle data
