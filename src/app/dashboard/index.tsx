@@ -40,6 +40,12 @@ export default function HomeScreen() {
   const [healthScore, setHealthScore] = useState<number>(0);
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
 
+  // Cycle tracking state
+  const [currentDay, setCurrentDay] = useState<number>(0);
+  const [cycleLength, setCycleLength] = useState<number>(28);
+  const [daysToNext, setDaysToNext] = useState<number>(0);
+  const [isOvulation, setIsOvulation] = useState<boolean>(false);
+
   const [refreshing, setRefreshing] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState<boolean>(false);
   const [showNotificationModal, setShowNotificationModal] = useState<boolean>(false);
@@ -119,7 +125,30 @@ export default function HomeScreen() {
         await AsyncStorage.setItem(sleepKey, sleepData.total_minutes.toString());
       }
 
-      // 5. Fetch health score from dashboard summary
+      // 5. Fetch cycle data if female
+      if (isFemale && session.user?.id) {
+        const { data: cycleData } = await supabase
+          .from('cycle_records')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (cycleData?.[0]?.period_start) {
+          const rec = cycleData[0];
+          const start = new Date(rec.period_start);
+          const today = new Date();
+          const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+          const len = rec.cycle_length || 28;
+          const day = ((diffDays % len) + len) % len + 1;
+          setCurrentDay(day);
+          setCycleLength(len);
+          setDaysToNext(len - day);
+          setIsOvulation(day >= (len - 14) && day <= (len - 10));
+        }
+      }
+
+      // 6. Fetch health score from dashboard summary
       const { data: summaryData } = await supabase.rpc('get_dashboard_summary');
       if (summaryData?.health_score) {
         setHealthScore(summaryData.health_score.score || 0);
@@ -415,8 +444,9 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* 4. Cycle Tracker Widget (Hoặc Cardio/Vitals nếu người dùng là Nam) */}
-          <TouchableOpacity
+          {/* 4. Cycle Tracker Widget (Chỉ hiển thị cho Nữ) */}
+          {isFemale && (
+            <TouchableOpacity
               style={styles.metricCard}
               onPress={() => router.push('/dashboard/cycle')}
               activeOpacity={0.8}
@@ -425,15 +455,28 @@ export default function HomeScreen() {
                 <View style={[styles.metricIconWrap, { backgroundColor: '#FCE7F3' }]}>
                   <Ionicons name="calendar" size={22} color="#DB2777" />
                 </View>
-                <Text style={[styles.metricProgressText, { color: '#DB2777' }]}>Day 14</Text>
+                <Text style={[styles.metricProgressText, { color: '#DB2777' }]}>
+                  {currentDay > 0 ? `Day ${currentDay}` : '-'}
+                </Text>
               </View>
               <Text style={styles.metricTitle}>Cycle Tracking</Text>
-              <Text style={styles.metricValue}>Cửa sổ rụng trứng</Text>
-              <Text style={styles.metricSub}>Khả năng thụ thai cao</Text>
+              <Text style={styles.metricValue}>
+                {currentDay > 0
+                  ? (isOvulation ? 'Cửa sổ rụng trứng' : 'Giai đoạn an toàn')
+                  : 'Chưa có dữ liệu'}
+              </Text>
+              <Text style={styles.metricSub}>
+                {currentDay > 0
+                  ? `Kỳ tiếp theo trong ${daysToNext} ngày`
+                  : 'Nhấn để bắt đầu theo dõi'}
+              </Text>
               <View style={[styles.metricFooterPill, { backgroundColor: '#FCE7F3' }]}>
-                <Text style={[styles.metricFooterPillText, { color: '#9D174D' }]}>14 ngày tới kỳ tiếp</Text>
+                <Text style={[styles.metricFooterPillText, { color: '#9D174D' }]}>
+                  Chu kỳ {cycleLength} ngày
+                </Text>
               </View>
             </TouchableOpacity>
+          )}
         </View>
 
         {/* Goals Button */}
