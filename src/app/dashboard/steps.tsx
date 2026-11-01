@@ -90,23 +90,38 @@ export default function StepsScreen() {
 
   const handleAddSteps = async (addedSteps: number) => {
     const nextSteps = steps + addedSteps;
-    setSteps(nextSteps);
-
     const today = new Date().toISOString().split('T')[0];
     const storageKey = `@healthy_check_steps_${today}`;
+    const newCalories = Math.round(nextSteps * 0.045);
+    const newDistance = parseFloat((nextSteps * 0.0008).toFixed(2));
+
+    // Update local state immediately (optimistic UI)
+    setSteps(nextSteps);
+
+    // Update history entry for today (or insert if missing)
+    setHistory((prev) => {
+      const exists = prev.some((h: any) => h.recorded_on === today);
+      if (exists) {
+        return prev.map((h: any) =>
+          h.recorded_on === today
+            ? { ...h, steps: nextSteps, calories_burned: newCalories, distance_km: newDistance }
+            : h
+        );
+      }
+      return [{ recorded_on: today, steps: nextSteps, calories_burned: newCalories, distance_km: newDistance }, ...prev];
+    });
+
     try {
       await AsyncStorage.setItem(storageKey, nextSteps.toString());
       await supabase.from('step_records').upsert({
         user_id: session?.user.id,
         recorded_on: today,
         steps: nextSteps,
-        calories_burned: Math.round(nextSteps * 0.04),
-        distance_km: parseFloat((nextSteps * 0.0008).toFixed(2)),
+        calories_burned: newCalories,
+        distance_km: newDistance,
         active_minutes: Math.round(nextSteps / 100),
         source: 'manual',
       });
-      // Refresh data to reflect change
-      await fetchData();
     } catch {
       // keep local
     }
