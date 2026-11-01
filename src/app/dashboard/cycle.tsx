@@ -88,6 +88,7 @@ export default function CycleScreen() {
   };
 
   const daysToNext = currentDay > 0 ? cycleLength - currentDay : 0;
+  const isOvulation = currentDay > 0 && currentDay >= (cycleLength - 14) && currentDay <= (cycleLength - 10);
 
   async function handleSave() {
     if (!session?.user?.id) return;
@@ -146,8 +147,10 @@ export default function CycleScreen() {
 
           {currentDay > 0 ? (
             <View style={styles.statusPill}>
-              <Ionicons name="sparkles" size={14} color="#BE185D" />
-              <Text style={styles.statusPillText}>Cửa sổ rụng trứng (Ovulation Window)</Text>
+              <Ionicons name="sparkles" size={14} color={isOvulation ? '#BE185D' : '#10B981'} />
+              <Text style={styles.statusPillText}>
+                {isOvulation ? 'Cửa sổ rụng trứng (Ovulation Window)' : 'Giai đoạn an toàn'}
+              </Text>
             </View>
           ) : (
             <View style={styles.statusPill}>
@@ -157,8 +160,8 @@ export default function CycleScreen() {
           )}
 
           <Text style={styles.heroSummary}>
-            {currentDay > 0 
-              ? 'Khả năng thụ thai cao hôm nay. Kỳ kinh tiếp theo dự kiến trong ' + daysToNext + ' ngày.'
+            {currentDay > 0
+              ? 'Ngày ' + currentDay + ' trong chu kỳ ' + cycleLength + ' ngày. Kỳ kinh tiếp theo dự kiến trong ' + daysToNext + ' ngày.'
               : 'Bắt đầu ghi nhận chu kỳ kinh để theo dõi sức khỏe sinh sản.'}
           </Text>
         </View>
@@ -167,9 +170,10 @@ export default function CycleScreen() {
         <View style={styles.calendarCard}>
           <Text style={styles.cardSectionTitle}>Lịch chu kỳ tháng này</Text>
           <View style={styles.calendarStrip}>
-            {[10, 11, 12, 13, 14, 15, 16].map((day) => {
-              const isToday = day === 14;
-              const isFertile = day >= 12 && day <= 16;
+            {Array.from({ length: 7 }, (_, i) => {
+              const day = currentDay > 0 ? ((currentDay - 3 + i + cycleLength) % cycleLength) + 1 : i + 1;
+              const isToday = currentDay > 0 && day === currentDay;
+              const isFertile = currentDay > 0 && day >= (cycleLength - 14) && day <= (cycleLength - 10);
               return (
                 <View
                   key={day}
