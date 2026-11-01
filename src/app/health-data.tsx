@@ -20,7 +20,7 @@ interface MetricRow {
   unit: string;
   icon: string;
   color: string;
-  category: 'activity' | 'body' | 'vitals';
+  category: 'activity' | 'body';
   targetRoute?: string;
 }
 
@@ -77,11 +77,9 @@ export default function HealthDataScreen() {
   const distanceKm = (stepsToday * 0.00075).toFixed(1);
 
   const metrics: MetricRow[] = [
-            { label: 'Nồng độ oxy trong máu (SpO2)', value: '98', unit: '%', icon: 'water', color: '#0284C7', category: 'vitals' },
     { label: 'Chỉ số khối cơ thể (BMI)', value: realBmi, unit: 'Chuẩn', icon: 'fitness', color: '#10B981', category: 'body', targetRoute: '/profile' },
     { label: 'Cân nặng', value: weight.toString(), unit: 'kg', icon: 'scale', color: '#8B5CF6', category: 'body', targetRoute: '/profile' },
     { label: 'Chiều cao', value: height.toString(), unit: 'cm', icon: 'resize', color: '#059669', category: 'body', targetRoute: '/profile' },
-    { label: 'Tỷ lệ mỡ cơ thể', value: '18.2', unit: '%', icon: 'body', color: '#F59E0B', category: 'body', targetRoute: '/profile' },
     { label: 'Năng lượng chuyển hóa nghỉ (BMR)', value: '1,420', unit: 'kcal', icon: 'flame', color: '#D97706', category: 'activity', targetRoute: '/dashboard/nutrition' },
     { label: 'Khoảng cách đi bộ hôm nay', value: distanceKm, unit: 'km', icon: 'walk', color: COLORS.primary, category: 'activity', targetRoute: '/dashboard/steps' },
   ];
@@ -89,15 +87,9 @@ export default function HealthDataScreen() {
   const handleMetricPress = (m: MetricRow) => {
     if (m.targetRoute) {
       router.push(m.targetRoute as any);
-    } else if (m.label.includes('SpO2')) {
-      Alert.alert(
-        'Nồng độ Oxy trong máu (SpO2)',
-        'Chỉ số hiện tại: 98% (Mức lý tưởng: 95% - 100%).\n\nNồng độ bão hòa oxy trong máu phản ánh khả năng vận chuyển oxy của hồng cầu tới các cơ quan mô.'
-      );
     }
   };
 
-  const vitals = metrics.filter((m) => m.category === 'vitals');
   const body = metrics.filter((m) => m.category === 'body');
   const activity = metrics.filter((m) => m.category === 'activity');
 
@@ -146,30 +138,6 @@ export default function HealthDataScreen() {
             <Text style={[styles.shortcutText, { color: '#16A34A' }]}>Mục tiêu</Text>
           </TouchableOpacity>
         </ScrollView>
-
-        {/* Section: Vitals */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chỉ số sinh tồn (Vitals)</Text>
-          <View style={styles.card}>
-            {vitals.map((m, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[styles.row, idx === vitals.length - 1 && { borderBottomWidth: 0 }]}
-                onPress={() => handleMetricPress(m)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconWrap, { backgroundColor: m.color + '15' }]}>
-                  <Ionicons name={m.icon as any} size={20} color={m.color} />
-                </View>
-                <Text style={styles.rowLabel}>{m.label}</Text>
-                <Text style={[styles.rowValue, { color: m.color }]}>
-                  {m.value} <Text style={styles.unitText}>{m.unit}</Text>
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} style={{ marginLeft: 6 }} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
 
         {/* Section: Body Measurements */}
         <View style={styles.section}>
