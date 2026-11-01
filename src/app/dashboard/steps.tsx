@@ -121,7 +121,7 @@ export default function StepsScreen() {
         distance_km: newDistance,
         active_minutes: Math.round(nextSteps / 100),
         source: 'manual',
-      });
+      }, { onConflict: 'user_id,recorded_on' });
     } catch {
       // keep local
     }
