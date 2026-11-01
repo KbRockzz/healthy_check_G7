@@ -482,34 +482,6 @@ export default function ProfileScreen() {
               trackColor={{ false: '#CBD5E1', true: COLORS.primary }}
             />
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.switchRow}>
-            <View style={styles.switchInfo}>
-              <Ionicons name="moon" size={20} color={COLORS.textTertiary} />
-              <Text style={styles.switchTitle}>Chia sẻ Giấc ngủ</Text>
-            </View>
-            <Switch
-              value={shareSleep}
-              onValueChange={setShareSleep}
-              trackColor={{ false: '#CBD5E1', true: COLORS.primary }}
-            />
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.switchRow}>
-            <View style={styles.switchInfo}>
-              <Ionicons name="restaurant" size={20} color={COLORS.textTertiary} />
-              <Text style={styles.switchTitle}>Chia sẻ Dinh dưỡng</Text>
-            </View>
-            <Switch
-              value={shareNutrition}
-              onValueChange={setShareNutrition}
-              trackColor={{ false: '#CBD5E1', true: COLORS.primary }}
-            />
-          </View>
         </View>
 
         {showDatePicker && (

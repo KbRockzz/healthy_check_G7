@@ -9,7 +9,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, Switch, Modal, Platform,
+  Alert, ActivityIndicator, Switch, Modal, Platform, TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,18 +30,85 @@ export default function ShareScreen() {
   const [shareNutrition, setShareNutrition] = useState(true);
   const [shareCycle, setShareCycle] = useState(false);
 
+  // Share links (DB-backed)
+  const [grants, setGrants] = useState<any[]>([]);
+  const [loadingGrants, setLoadingGrants] = useState(false);
+  const [creatingLink, setCreatingLink] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [validityDays, setValidityDays] = useState(30);
+  const [selectedScopes, setSelectedScopes] = useState<string[]>(['steps', 'sleep', 'nutrition']);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
   // Clinical PDF preview modal
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [savedPdfPath, setSavedPdfPath] = useState<string | null>(null);
 
+  // Load existing grants
+  const loadGrants = async () => {
+    if (!session?.user?.id) return;
+    setLoadingGrants(true);
+    try {
+      const { data, error } = await supabase.rpc('list_my_shares');
+      if (error) throw error;
+      setGrants(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('loadGrants error', err);
+    } finally {
+      setLoadingGrants(false);
+    }
+  };
+
   useEffect(() => {
-    if (authLoading) return;
-    if (!session) {
-      router.replace('/auth/sign-in');
+    if (session) loadGrants();
+  }, [session]);
+
+  const handleCreateLink = async () => {
+    if (!recipientEmail.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập email người nhận');
       return;
     }
-  }, [session, authLoading]);
+    if (selectedScopes.length === 0) {
+      Alert.alert('Lỗi', 'Chọn ít nhất một nhóm dữ liệu');
+      return;
+    }
+    setCreatingLink(true);
+    try {
+      const { data, error } = await supabase.rpc('create_share_link', {
+        p_recipient_email: recipientEmail.trim(),
+        p_recipient_name: recipientName.trim() || null,
+        p_scopes: selectedScopes,
+        p_validity_days: validityDays,
+      });
+      if (error) throw error;
+      Alert.alert('Thành công', `Đã tạo liên kết chia sẻ. Mã: ${String(data).slice(0, 8)}...`);
+      setShowCreateForm(false);
+      setRecipientEmail('');
+      setRecipientName('');
+      await loadGrants();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.message || 'Không thể tạo liên kết');
+    } finally {
+      setCreatingLink(false);
+    }
+  };
+
+  const handleRevoke = async (grantId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('revoke_share_link', { p_grant_id: grantId });
+      if (error) throw error;
+      if (data) await loadGrants();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.message || 'Không thể thu hồi');
+    }
+  };
+
+  const toggleScope = (scope: string) => {
+    setSelectedScopes(prev =>
+      prev.includes(scope) ? prev.filter(s => s !== scope) : [...prev, scope]
+    );
+  };
 
   // Tạo nội dung HTML chuẩn y khoa cho báo cáo lâm sàng
   const buildHtmlReport = () => {
@@ -404,8 +471,63 @@ export default function ShareScreen() {
           <Ionicons name="chevron-forward" size={20} color="#15803D" />
         </TouchableOpacity>
 
+        {/* Grants Section */}
+        <Text style={styles.sectionTitle}>Lời mời chia sẻ hiện tại</Text>
+        <TouchableOpacity style={styles.createBtn} onPress={() => setShowCreateForm(!showCreateForm)}>
+          <Ionicons name="add" size={20} color="white" />
+          <Text style={{color: 'white', fontWeight: 'bold', marginLeft: 8}}>Tạo liên kết chia sẻ</Text>
+        </TouchableOpacity>
+
+        {showCreateForm && (
+          <View style={styles.togglesCard}>
+            <Text style={{fontWeight: 'bold', marginBottom: 10, color: COLORS.textPrimary}}>Email người nhận</Text>
+            <TextInput
+              value={recipientEmail}
+              onChangeText={setRecipientEmail}
+              style={[styles.input, {paddingVertical: 8}]}
+              placeholder="bacsi@clinic.com"
+              placeholderTextColor={COLORS.textTertiary}
+            />
+            <Text style={{fontWeight: 'bold', marginBottom: 10, color: COLORS.textPrimary}}>Tên người nhận (tùy chọn)</Text>
+            <TextInput
+              value={recipientName}
+              onChangeText={setRecipientName}
+              style={[styles.input, {paddingVertical: 8}]}
+              placeholder="Bác sĩ Nguyễn"
+              placeholderTextColor={COLORS.textTertiary}
+            />
+            <Text style={{fontWeight: 'bold', marginBottom: 8, color: COLORS.textPrimary}}>Nhóm dữ liệu chia sẻ</Text>
+            <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12}}>
+              {['steps', 'sleep', 'nutrition'].map(scope => (
+                <TouchableOpacity
+                  key={scope}
+                  style={{paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: selectedScopes.includes(scope) ? COLORS.primary : COLORS.border, backgroundColor: selectedScopes.includes(scope) ? '#E0F2FE' : 'transparent'}}
+                  onPress={() => toggleScope(scope)}
+                >
+                  <Text style={{color: selectedScopes.includes(scope) ? COLORS.primary : COLORS.textSecondary, fontWeight: '600'}}>{scope}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.createBtn} onPress={handleCreateLink} disabled={creatingLink}>
+              {creatingLink ? <ActivityIndicator color="white" /> : <Text style={{color: 'white', fontWeight: 'bold'}}>Gửi mời</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {loadingGrants ? <ActivityIndicator /> : (
+          grants.map(g => (
+            <View key={g.id} style={styles.togglesCard}>
+              <Text style={{fontWeight: 'bold', color: COLORS.textPrimary}}>{g.recipient_email}</Text>
+              <Text style={{color: COLORS.textSecondary, marginVertical: 4}}>Trạng thái: {g.status}</Text>
+              <Text style={{color: COLORS.textSecondary, fontSize: 12}}>Nhóm: {(g.scopes || []).join(', ')}</Text>
+              <TouchableOpacity onPress={() => handleRevoke(g.id)} style={{marginTop: 8}}>
+                <Text style={{color: COLORS.danger, fontWeight: '600'}}>Thu hồi</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+
         {/* Category Toggles */}
-        <Text style={styles.sectionTitle}>Các nhóm dữ liệu cho phép xem</Text>
         <View style={styles.togglesCard}>
           <View style={styles.toggleRow}>
             <View style={styles.toggleLabelRow}>
@@ -890,5 +1012,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: FONT_FAMILY.bold as string,
     color: COLORS.primary,
+  },
+  createBtn: {
+    backgroundColor: '#0284C7',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  input: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    backgroundColor: COLORS.surface,
   },
 });
