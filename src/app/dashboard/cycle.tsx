@@ -301,10 +301,10 @@ export default function CycleScreen() {
 
   const handleDateSelect = (date: string) => { setSelectedDate(date); loadDateLog(date); };
 
-  // Generate last 14 days + today + next 14 days
-  const daySelectorDays = Array.from({ length: 29 }, (_, i) => {
+  // Generate today + last 14 days (15 days total)
+  const daySelectorDays = Array.from({ length: 15 }, (_, i) => {
     const d = new Date();
-    d.setDate(d.getDate() - 14 + i);
+    d.setDate(d.getDate() - (14 - i));
     return {
       dateStr: d.toISOString().split('T')[0],
       day: d.getDate(),
@@ -338,51 +338,60 @@ export default function CycleScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Cycle Wheel Hero Card */}
-        <View style={styles.heroCard}>
-          <View style={styles.cycleCircleWrap}>
-            <View style={styles.cycleCircle}>
-              <Text style={styles.cycleDayNum}>Day {currentDay}</Text>
-              <Text style={styles.cycleTotal}>/ {cycleLength} ngày</Text>
-            </View>
-          </View>
-          <View style={styles.statusPill}>
-            <Ionicons name={isPeriod ? 'water' : isOvulation ? 'sparkles' : isFertile ? 'flame' : 'shield-checkmark'} size={14} color={isPeriod ? '#EF4444' : isOvulation ? '#BE185D' : isFertile ? '#F59E0B' : '#10B981'} />
-            <Text style={styles.statusPillText}>{isPeriod ? 'Đang kỳ kinh' : isOvulation ? 'Rụng trứng' : isFertile ? 'Hiệp sinh' : 'An toàn'}</Text>
-          </View>
-          <Text style={styles.heroSummary}>
-            {isPeriod ? `Kỳ kinh đang diễn ra. Ngày thứ ${currentDay}.` : isOvulation ? 'Khả năng thụ thai cao nhất!' : isFertile ? 'Giai đoạn dễ thụ thai.' : `Kỳ kinh tiếp theo dự kiến trong ${daysToNext} ngày.`}
-          </Text>
-        </View>
-
-        {/* Circular Date Selector - 29 days (14 past + today + 14 future) */}
-        <View style={styles.sectionWrap}>
-          <Text style={styles.cardSectionTitle}>Chọn ngày bắt đầu kỳ kinh</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelectorRow}>
-            {daySelectorDays.map((d, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[
-                  styles.dayCircle,
-                  d.isPeriodStart && { backgroundColor: '#DB2777', borderColor: '#DB2777' },
-                  d.isInPeriod && { backgroundColor: '#FBCFE8', borderColor: '#FBCFE8' },
-                  d.isToday && styles.todayCircle,
-                ]}
-                onPress={() => { if (!d.isInPeriod && !d.isPeriodStart) handleMarkPeriodStart(d.dateStr); }}
-                disabled={d.isInPeriod || d.isPeriodStart}
-              >
-                <Text style={[
-                  styles.dayCircleText,
-                  d.isPeriodStart && styles.dayCircleTextActive,
-                  d.isToday && { color: '#FFFFFF' },
-                ]}>
-                  {d.isToday ? 'Hôm nay' : `${d.day}`}
+        {/* Circular Date Selector - REPLACES Hero Card */}
+        <View style={styles.daySelectorWrap}>
+          {!hasPeriodStarted || periodEnd ? (
+            <>
+              <Text style={styles.daySelectorLabel}>Chọn ngày bắt đầu kỳ kinh</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelectorRow}>
+                {daySelectorDays.map((d, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[
+                      styles.dayCircle,
+                      d.isPeriodStart && styles.dayCirclePeriodStart,
+                      d.isInPeriod && styles.dayCircleInPeriod,
+                      d.isToday && styles.dayCircleToday,
+                    ]}
+                    onPress={() => { if (!d.isInPeriod && !d.isPeriodStart) handleMarkPeriodStart(d.dateStr); }}
+                    disabled={d.isInPeriod || d.isPeriodStart}
+                  >
+                    <Text style={[styles.dayCircleText, d.isPeriodStart && styles.dayCircleTextActive]}>
+                      {d.isToday ? 'Hôm nay' : `${d.day}`}
+                    </Text>
+                    {!d.isToday && <Text style={[styles.dayCircleSub, d.isPeriodStart && styles.dayCircleSubActive]}>{d.month}</Text>}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <Text style={styles.selectorHint}>Nhấn ngày để bắt đầu kỳ kinh</Text>
+            </>
+          ) : (
+            /* Show hero card when period is active and not ended */
+            <>
+              <View style={styles.heroCard}>
+                <View style={styles.cycleCircleWrap}>
+                  <View style={styles.cycleCircle}>
+                    <Text style={styles.cycleDayNum}>Day {currentDay}</Text>
+                    <Text style={styles.cycleTotal}>/ {cycleLength} ngày</Text>
+                  </View>
+                </View>
+                <View style={styles.statusPill}>
+                  <Ionicons name={isPeriod ? 'water' : isOvulation ? 'sparkles' : isFertile ? 'flame' : 'shield-checkmark'} size={14} color={isPeriod ? '#EF4444' : isOvulation ? '#BE185D' : isFertile ? '#F59E0B' : '#10B981'} />
+                  <Text style={styles.statusPillText}>{isPeriod ? 'Đang kỳ kinh' : isOvulation ? 'Rụng trứng' : isFertile ? 'Hiệp sinh' : 'An toàn'}</Text>
+                </View>
+                <Text style={styles.heroSummary}>
+                  {isPeriod ? `Kỳ kinh đang diễn ra. Ngày thứ ${currentDay}.` : isOvulation ? 'Khả năng thụ thai cao nhất!' : isFertile ? 'Giai đoạn dễ thụ thai.' : `Kỳ kinh tiếp theo dự kiến trong ${daysToNext} ngày.`}
                 </Text>
-                {!d.isToday && <Text style={[styles.dayCircleSub, d.isPeriodStart && styles.dayCircleSubActive]}>{d.month}</Text>}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <Text style={styles.selectorHint}>Nhấn vào ngày để bắt đầu kỳ kinh · Vòng hồng = đang có kinh</Text>
+                {/* End period button */}
+                {!periodEnd && (
+                  <TouchableOpacity style={styles.endPeriodBtn} onPress={() => setShowDatePickerEnd(true)}>
+                    <Ionicons name="stop-circle" size={18} color="#FFFFFF" />
+                    <Text style={styles.endPeriodText}>Kết thúc kỳ kinh</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </>
+          )}
         </View>
 
         {/* Add past period button */}
@@ -646,13 +655,17 @@ const styles = StyleSheet.create({
   heroSummary: { fontSize: 13, color: '#831843', fontFamily: FONT_FAMILY.base as string, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
 
   // Circular Day Selector
+  daySelectorWrap: { marginTop: 20, marginBottom: 8 },
+  daySelectorLabel: { fontSize: 15, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, color: COLORS.textPrimary, marginBottom: 12, textAlign: 'center' },
   daySelectorRow: { gap: 8, paddingHorizontal: 4 },
-  dayCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
-  dayCircleText: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
+  dayCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
+  dayCircleText: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
   dayCircleSub: { fontSize: 9, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
   dayCircleTextActive: { color: '#FFFFFF' },
   dayCircleSubActive: { color: '#FCE7F3' },
-  todayCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#DB2777', borderColor: '#DB2777', alignItems: 'center', justifyContent: 'center' },
+  dayCircleToday: { borderWidth: 2, borderColor: '#DB2777' },
+  dayCirclePeriodStart: { backgroundColor: '#DB2777', borderColor: '#DB2777' },
+  dayCircleInPeriod: { backgroundColor: '#FBCFE8', borderColor: '#FBCFE8' },
   selectorHint: { fontSize: 11, color: COLORS.textTertiary, textAlign: 'center', marginTop: 10, fontFamily: FONT_FAMILY.base as string },
 
   // Add Past Period Button
@@ -662,6 +675,8 @@ const styles = StyleSheet.create({
   // Prediction Card
   sectionWrap: { marginTop: 18 },
   cardSectionTitle: { fontSize: 15, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, color: COLORS.textPrimary, marginBottom: 12 },
+  endPeriodBtn: { backgroundColor: '#10B981', height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, width: '100%' },
+  endPeriodText: { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF', fontFamily: FONT_FAMILY.bold as string },
   predictionCard: { backgroundColor: COLORS.card, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
   predictionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderColor: COLORS.border },
   predBadge: { backgroundColor: '#FCE7F3', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, marginRight: 12 },
