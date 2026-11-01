@@ -407,7 +407,7 @@ export default function CycleScreen() {
                 disabled={d.isInPeriod || d.isPeriodStart}
               >
                 <Text style={[styles.dayCircleText, d.isPeriodStart && styles.dayCircleTextActive, selectedDayIndex === idx && styles.dayCircleTextSelected]}>
-                  {d.isToday ? 'Hôm nay' : `${d.day}`}
+                  {d.isToday ? 'Hn' : `${d.day}`}
                 </Text>
                 {!d.isToday && <Text style={[styles.dayCircleSub, d.isPeriodStart && styles.dayCircleSubActive, selectedDayIndex === idx && styles.dayCircleSubSelected]}>{d.month}</Text>}
               </TouchableOpacity>
@@ -705,8 +705,8 @@ const styles = StyleSheet.create({
   daySelectorWrap: { marginTop: 16, marginBottom: 4, paddingHorizontal: 20 },
   daySelectorLabel: { fontSize: 15, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, color: COLORS.textPrimary, marginBottom: 12, textAlign: 'center' },
   daySelectorRow: { gap: 8, paddingHorizontal: 4 },
-  dayCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
-  dayCircleText: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
+  dayCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
+  dayCircleText: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
   dayCircleSub: { fontSize: 9, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
   dayCircleTextActive: { color: '#FFFFFF' },
   dayCircleSubActive: { color: '#FCE7F3' },
