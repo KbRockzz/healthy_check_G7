@@ -4,8 +4,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, TextInput, Modal, Platform,
-} from 'react-native';
+  Alert, ActivityIndicator, TextInput, Modal, Platform, useRef,
+} from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -89,6 +89,10 @@ export default function CycleScreen() {
   const [pastEndDate, setPastEndDate] = useState<string>('');
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+
+  // Day selector state
+  const daySelectorRef = useRef<ScrollView>(null);
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(14); // default to today
 
   // Fetch cycle data
   const fetchCycleData = useCallback(async () => {
@@ -213,6 +217,14 @@ export default function CycleScreen() {
     if (!session) { router.replace('/auth/sign-in'); return; }
     fetchCycleData();
   }, [session, authLoading, fetchCycleData]);
+
+  useEffect(() => {
+    if (loaded && daySelectorRef.current) {
+      setTimeout(() => {
+        daySelectorRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+    }
+  }, [loaded]);
 
   const toggleSymptom = (id: string) => {
     setSelectedSymptoms((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
@@ -372,7 +384,12 @@ export default function CycleScreen() {
         {/* Circular Date Selector - BELOW Hero Card */}
         <View style={styles.daySelectorWrap}>
           <Text style={styles.daySelectorLabel}>Chọn ngày bắt đầu kỳ kinh</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelectorRow}>
+          <ScrollView
+            ref={daySelectorRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.daySelectorRow}
+          >
             {daySelectorDays.map((d, idx) => (
               <TouchableOpacity
                 key={idx}
@@ -381,25 +398,42 @@ export default function CycleScreen() {
                   d.isPeriodStart && styles.dayCirclePeriodStart,
                   d.isInPeriod && styles.dayCircleInPeriod,
                   d.isToday && styles.dayCircleToday,
+                  selectedDayIndex === idx && styles.dayCircleSelected,
                 ]}
                 onPress={() => {
-                  // If period is active and not ended, prevent starting new period
-                  if (hasActivePeriod && !periodEnd) {
-                    Alert.alert('Chưa kết thúc', 'Vui lòng kết thúc kỳ kinh hiện tại trước khi bắt đầu kỳ mới.');
-                    return;
-                  }
-                  if (!d.isInPeriod && !d.isPeriodStart) handleMarkPeriodStart(d.dateStr);
+                  if (d.isInPeriod || d.isPeriodStart) return;
+                  setSelectedDayIndex(idx);
                 }}
                 disabled={d.isInPeriod || d.isPeriodStart}
               >
-                <Text style={[styles.dayCircleText, d.isPeriodStart && styles.dayCircleTextActive]}>
+                <Text style={[styles.dayCircleText, d.isPeriodStart && styles.dayCircleTextActive, selectedDayIndex === idx && styles.dayCircleTextSelected]}>
                   {d.isToday ? 'Hôm nay' : `${d.day}`}
                 </Text>
-                {!d.isToday && <Text style={[styles.dayCircleSub, d.isPeriodStart && styles.dayCircleSubActive]}>{d.month}</Text>}
+                {!d.isToday && <Text style={[styles.dayCircleSub, d.isPeriodStart && styles.dayCircleSubActive, selectedDayIndex === idx && styles.dayCircleSubSelected]}>{d.month}</Text>}
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <Text style={styles.selectorHint}>Nhấn ngày để bắt đầu kỳ kinh</Text>
+          {/* Start Period Button */}
+          {!hasActivePeriod && (
+            <TouchableOpacity
+              style={[
+                styles.startPeriodBtn,
+                (daySelectorDays[selectedDayIndex]?.isInPeriod || daySelectorDays[selectedDayIndex]?.isPeriodStart) && styles.startPeriodBtnDisabled,
+              ]}
+              onPress={() => {
+                const selDay = daySelectorDays[selectedDayIndex];
+                if (!selDay || selDay.isInPeriod || selDay.isPeriodStart) return;
+                handleMarkPeriodStart(selDay.dateStr);
+              }}
+              disabled={daySelectorDays[selectedDayIndex]?.isInPeriod || daySelectorDays[selectedDayIndex]?.isPeriodStart}
+            >
+              <Ionicons name="play-circle" size={18} color="#FFFFFF" />
+              <Text style={styles.startPeriodBtnText}>
+                Bắt đầu kỳ kinh {daySelectorDays[selectedDayIndex]?.isToday ? 'hôm nay' : `ngày ${daySelectorDays[selectedDayIndex]?.day}/${daySelectorDays[selectedDayIndex]?.month}`}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.selectorHint}>Vuốt để chọn ngày, nhấn nút bên dưới để xác nhận</Text>
         </View>
 
         {/* Add past period button */}
@@ -679,11 +713,19 @@ const styles = StyleSheet.create({
   dayCircleToday: { borderWidth: 2, borderColor: '#DB2777' },
   dayCirclePeriodStart: { backgroundColor: '#DB2777', borderColor: '#DB2777' },
   dayCircleInPeriod: { backgroundColor: '#FBCFE8', borderColor: '#FBCFE8' },
+  dayCircleSelected: { borderWidth: 3, borderColor: '#DB2777', backgroundColor: '#FDF2F8' },
+  dayCircleTextSelected: { color: '#BE185D' },
+  dayCircleSubSelected: { color: '#BE185D' },
   selectorHint: { fontSize: 11, color: COLORS.textTertiary, textAlign: 'center', marginTop: 10, fontFamily: FONT_FAMILY.base as string },
 
   // Add Past Period Button
   addPastBtn: { backgroundColor: '#BE185D', borderRadius: 24, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, marginBottom: 4 },
   addPastText: { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF', fontFamily: FONT_FAMILY.bold as string },
+
+  // Start Period Button
+  startPeriodBtn: { backgroundColor: '#DB2777', height: 50, borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, marginBottom: 8, ...SHADOWS.sm },
+  startPeriodBtnDisabled: { backgroundColor: '#FBCFE8', opacity: 0.6 },
+  startPeriodBtnText: { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF', fontFamily: FONT_FAMILY.bold as string },
 
   // Prediction Card
   sectionWrap: { marginTop: 18 },
