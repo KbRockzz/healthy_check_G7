@@ -55,7 +55,8 @@ export default function CycleScreen() {
   const [cycleLength, setCycleLength] = useState<number>(28);
   const [periodStart, setPeriodStart] = useState<string>('');
   const [periodEnd, setPeriodEnd] = useState<string>('');
-  const [hasPeriodStarted, setHasPeriodStarted] = useState<boolean>(false);
+  // Track whether the latest non-predicted period is still ACTIVE (no end date yet)
+  const [hasActivePeriod, setHasActivePeriod] = useState<boolean>(false);
 
   // Daily log state
   const [selectedFlow, setSelectedFlow] = useState<string>('none');
@@ -107,9 +108,14 @@ export default function CycleScreen() {
       if (periodData && periodData.length > 0) {
         const p = periodData[0];
         setPeriodStart(p.period_start);
-        if (p.period_end) setPeriodEnd(p.period_end);
+        if (p.period_end) {
+          setPeriodEnd(p.period_end);
+          setHasActivePeriod(false);
+        } else {
+          setPeriodEnd('');
+          setHasActivePeriod(true);
+        }
         if (p.cycle_length) setCycleLength(p.cycle_length);
-        setHasPeriodStarted(true);
 
         const start = new Date(p.period_start);
         const now = new Date();
@@ -130,7 +136,7 @@ export default function CycleScreen() {
         }
         setPredictedDates(predictions);
       } else {
-        setHasPeriodStarted(false);
+        setHasActivePeriod(false);
         setPeriodStart('');
         setPeriodEnd('');
       }
@@ -214,7 +220,7 @@ export default function CycleScreen() {
 
   const daysToNext = currentDay > 0 ? cycleLength - currentDay : 0;
   const isOvulation = currentDay >= (cycleLength - 14) && currentDay <= (cycleLength - 10);
-  const isPeriod = hasPeriodStarted && currentDay <= 5;
+  const isPeriod = hasActivePeriod && currentDay <= 5;
   const isFertile = currentDay >= 10 && currentDay <= 17;
 
   // Helpers
@@ -247,22 +253,23 @@ export default function CycleScreen() {
     } catch (err: any) { Alert.alert('Lỗi', err.message || 'Không thể ghi nhận.'); }
   };
 
-  // Mark period end
-  const handleMarkPeriodEnd = async (date?: string) => {
-    if (!session?.user?.id || !periodStart) return;
+  // Mark period end - UPDATE THE SPECIFIC PERIOD, NOT THE LATEST
+  const handleMarkPeriodEnd = async (periodId?: number, date?: string) => {
+    if (!session?.user?.id) return;
     const pe = date || new Date().toISOString().split('T')[0];
-    if (new Date(pe) < new Date(periodStart)) { Alert.alert('Lỗi', 'Ngày kết thúc phải sau ngày bắt đầu.'); return; }
     try {
-      const { data: period } = await supabase.from('cycle_periods').select('id').eq('user_id', session.user.id).eq('is_predicted', false).single();
-      if (period) {
-        await supabase.from('cycle_periods').update({ period_end: pe }).eq('id', period.id);
-        setPeriodEnd(pe);
-        Alert.alert('Đã kết thúc! 🌸', `Đã ghi nhận ngày kết thúc: ${new Date(pe).toLocaleDateString('vi-VN')}.`);
-        setShowDatePickerEnd(false);
-        setShowEndPicker(false);
-        setShowAddPastModal(false);
-        await fetchCycleData();
+      // If no specific periodId given, update the active (latest non-ended) period
+      if (!periodId) {
+        const { data: active } = await supabase.from('cycle_periods').select('id').eq('user_id', session.user.id).eq('is_predicted', false).order('period_start', { ascending: false }).limit(1);
+        if (!active || active.length === 0) return;
+        periodId = active[0].id;
       }
+      await supabase.from('cycle_periods').update({ period_end: pe }).eq('id', periodId);
+      Alert.alert('Đã kết thúc! 🌸', `Đã ghi nhận ngày kết thúc: ${new Date(pe).toLocaleDateString('vi-VN')}.`);
+      setShowDatePickerEnd(false);
+      setShowEndPicker(false);
+      setShowAddPastModal(false);
+      await fetchCycleData();
     } catch (err: any) { Alert.alert('Lỗi', err.message || 'Không thể ghi nhận.'); }
   };
 
@@ -338,60 +345,61 @@ export default function CycleScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Circular Date Selector - REPLACES Hero Card */}
-        <View style={styles.daySelectorWrap}>
-          {!hasPeriodStarted || periodEnd ? (
-            <>
-              <Text style={styles.daySelectorLabel}>Chọn ngày bắt đầu kỳ kinh</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelectorRow}>
-                {daySelectorDays.map((d, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[
-                      styles.dayCircle,
-                      d.isPeriodStart && styles.dayCirclePeriodStart,
-                      d.isInPeriod && styles.dayCircleInPeriod,
-                      d.isToday && styles.dayCircleToday,
-                    ]}
-                    onPress={() => { if (!d.isInPeriod && !d.isPeriodStart) handleMarkPeriodStart(d.dateStr); }}
-                    disabled={d.isInPeriod || d.isPeriodStart}
-                  >
-                    <Text style={[styles.dayCircleText, d.isPeriodStart && styles.dayCircleTextActive]}>
-                      {d.isToday ? 'Hôm nay' : `${d.day}`}
-                    </Text>
-                    {!d.isToday && <Text style={[styles.dayCircleSub, d.isPeriodStart && styles.dayCircleSubActive]}>{d.month}</Text>}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <Text style={styles.selectorHint}>Nhấn ngày để bắt đầu kỳ kinh</Text>
-            </>
-          ) : (
-            /* Show hero card when period is active and not ended */
-            <>
-              <View style={styles.heroCard}>
-                <View style={styles.cycleCircleWrap}>
-                  <View style={styles.cycleCircle}>
-                    <Text style={styles.cycleDayNum}>Day {currentDay}</Text>
-                    <Text style={styles.cycleTotal}>/ {cycleLength} ngày</Text>
-                  </View>
-                </View>
-                <View style={styles.statusPill}>
-                  <Ionicons name={isPeriod ? 'water' : isOvulation ? 'sparkles' : isFertile ? 'flame' : 'shield-checkmark'} size={14} color={isPeriod ? '#EF4444' : isOvulation ? '#BE185D' : isFertile ? '#F59E0B' : '#10B981'} />
-                  <Text style={styles.statusPillText}>{isPeriod ? 'Đang kỳ kinh' : isOvulation ? 'Rụng trứng' : isFertile ? 'Hiệp sinh' : 'An toàn'}</Text>
-                </View>
-                <Text style={styles.heroSummary}>
-                  {isPeriod ? `Kỳ kinh đang diễn ra. Ngày thứ ${currentDay}.` : isOvulation ? 'Khả năng thụ thai cao nhất!' : isFertile ? 'Giai đoạn dễ thụ thai.' : `Kỳ kinh tiếp theo dự kiến trong ${daysToNext} ngày.`}
-                </Text>
-                {/* End period button */}
-                {!periodEnd && (
-                  <TouchableOpacity style={styles.endPeriodBtn} onPress={() => setShowDatePickerEnd(true)}>
-                    <Ionicons name="stop-circle" size={18} color="#FFFFFF" />
-                    <Text style={styles.endPeriodText}>Kết thúc kỳ kinh</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </>
+        {/* Hero Card - ALWAYS VISIBLE */}
+        <View style={styles.heroCard}>
+          <View style={styles.cycleCircleWrap}>
+            <View style={styles.cycleCircle}>
+              <Text style={styles.cycleDayNum}>Day {currentDay}</Text>
+              <Text style={styles.cycleTotal}>/ {cycleLength} ngày</Text>
+            </View>
+          </View>
+          <View style={styles.statusPill}>
+            <Ionicons name={isPeriod ? 'water' : isOvulation ? 'sparkles' : isFertile ? 'flame' : 'shield-checkmark'} size={14} color={isPeriod ? '#EF4444' : isOvulation ? '#BE185D' : isFertile ? '#F59E0B' : '#10B981'} />
+            <Text style={styles.statusPillText}>{isPeriod ? 'Đang kỳ kinh' : isOvulation ? 'Rụng trứng' : isFertile ? 'Hiệp sinh' : 'An toàn'}</Text>
+          </View>
+          <Text style={styles.heroSummary}>
+            {isPeriod ? `Kỳ kinh đang diễn ra. Ngày thứ ${currentDay}.` : isOvulation ? 'Khả năng thụ thai cao nhất!' : isFertile ? 'Giai đoạn dễ thụ thai.' : `Kỳ kinh tiếp theo dự kiến trong ${daysToNext} ngày.`}
+          </Text>
+          {/* End period button if active period is ongoing and not ended */}
+          {hasActivePeriod && !periodEnd && (
+            <TouchableOpacity style={styles.endPeriodBtn} onPress={() => setShowDatePickerEnd(true)}>
+              <Ionicons name="stop-circle" size={18} color="#FFFFFF" />
+              <Text style={styles.endPeriodText}>Kết thúc kỳ kinh</Text>
+            </TouchableOpacity>
           )}
+        </View>
+
+        {/* Circular Date Selector - BELOW Hero Card */}
+        <View style={styles.daySelectorWrap}>
+          <Text style={styles.daySelectorLabel}>Chọn ngày bắt đầu kỳ kinh</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelectorRow}>
+            {daySelectorDays.map((d, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  styles.dayCircle,
+                  d.isPeriodStart && styles.dayCirclePeriodStart,
+                  d.isInPeriod && styles.dayCircleInPeriod,
+                  d.isToday && styles.dayCircleToday,
+                ]}
+                onPress={() => {
+                  // If period is active and not ended, prevent starting new period
+                  if (hasActivePeriod && !periodEnd) {
+                    Alert.alert('Chưa kết thúc', 'Vui lòng kết thúc kỳ kinh hiện tại trước khi bắt đầu kỳ mới.');
+                    return;
+                  }
+                  if (!d.isInPeriod && !d.isPeriodStart) handleMarkPeriodStart(d.dateStr);
+                }}
+                disabled={d.isInPeriod || d.isPeriodStart}
+              >
+                <Text style={[styles.dayCircleText, d.isPeriodStart && styles.dayCircleTextActive]}>
+                  {d.isToday ? 'Hôm nay' : `${d.day}`}
+                </Text>
+                {!d.isToday && <Text style={[styles.dayCircleSub, d.isPeriodStart && styles.dayCircleSubActive]}>{d.month}</Text>}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <Text style={styles.selectorHint}>Nhấn ngày để bắt đầu kỳ kinh</Text>
         </View>
 
         {/* Add past period button */}
@@ -550,7 +558,7 @@ export default function CycleScreen() {
         <DateTimePicker value={new Date()} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} maximumDate={new Date()} onChange={(ev, date) => { setShowDatePicker(false); if (date) handleMarkPeriodStart(date.toISOString().split('T')[0]); }} />
       )}
       {showDatePickerEnd && (
-        <DateTimePicker value={periodStart ? new Date(periodStart) : new Date()} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minimumDate={periodStart ? new Date(periodStart) : undefined} onChange={(ev, date) => { setShowDatePickerEnd(false); if (date) handleMarkPeriodEnd(date.toISOString().split('T')[0]); }} />
+        <DateTimePicker value={periodStart ? new Date(periodStart) : new Date()} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minimumDate={periodStart ? new Date(periodStart) : undefined} onChange={(ev, date) => { setShowDatePickerEnd(false); if (date) handleMarkPeriodEnd(null as any, date.toISOString().split('T')[0]); }} />
       )}
 
       {/* Add Past Period Modal */}
@@ -579,8 +587,13 @@ export default function CycleScreen() {
               onPress={async () => {
                 if (!pastStartDate) { Alert.alert('Lỗi', 'Vui lòng chọn ngày bắt đầu'); return; }
                 if (pastEndDate && new Date(pastEndDate) < new Date(pastStartDate)) { Alert.alert('Lỗi', 'Ngày kết thúc phải sau ngày bắt đầu'); return; }
-                await handleMarkPeriodStart(pastStartDate);
-                if (pastEndDate) await handleMarkPeriodEnd(pastEndDate);
+                const inserted = await supabase.from('cycle_periods').insert({ user_id: session.user.id, period_start: pastStartDate, cycle_length: cycleLength, is_predicted: false }).select('id').single();
+                if (inserted.data) {
+                  await handleMarkPeriodEnd(inserted.data.id, pastEndDate);
+                } else {
+                  await handleMarkPeriodStart(pastStartDate);
+                  if (pastEndDate) Alert.alert('Lưu kỳ kinh', 'Đã lưu ngày bắt đầu. Vui lòng chọn ngày kết thúc trong phần "Kết thúc kỳ kinh".');
+                }
               }}
             >
               <Text style={styles.confirmBtnText}>Lưu kỳ kinh</Text>
@@ -655,7 +668,7 @@ const styles = StyleSheet.create({
   heroSummary: { fontSize: 13, color: '#831843', fontFamily: FONT_FAMILY.base as string, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
 
   // Circular Day Selector
-  daySelectorWrap: { marginTop: 20, marginBottom: 8 },
+  daySelectorWrap: { marginTop: 16, marginBottom: 4, paddingHorizontal: 20 },
   daySelectorLabel: { fontSize: 15, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string, color: COLORS.textPrimary, marginBottom: 12, textAlign: 'center' },
   daySelectorRow: { gap: 8, paddingHorizontal: 4 },
   dayCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
