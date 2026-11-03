@@ -2,98 +2,66 @@
  * Màn hình Chi tiết bài viết (Article Detail Screen)
  * Thiết kế sống động, tương tác phong phú:
  * - Tùy chỉnh kích thước chữ đọc (A- / A+)
- * - Hộp điểm cốt lõi (Key Takeaways) & Trích dẫn chuyên gia (Expert Quote)
- * - Danh sách việc cần làm tương tác (Interactive Action Checklist)
+ * - Điểm cốt lõi (Key Takeaways) & Trích dẫn chuyên gia (Expert Quote)
+ * - Mẹo thực hành tương tác (Interactive Action Checklist)
  * - Nút yêu thích, lưu bài viết (Bookmark), chia sẻ & Đề xuất bài viết liên quan
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, Share, Platform,
+  Alert, Share, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
-import { useAuth } from '@/lib/hooks/use-auth';
-import { supabase } from '@/lib/supabase';
-import { HEALTH_ARTICLES, DetailedArticle } from '@/data/health-articles';
+import { COLORS, SHADOWS, FONT_FAMILY } from '@/theme';
+import { useExplore } from '@/lib/hooks/use-explore';
+import { registerView } from '@/lib/explore-api';
+import { ArticleBody } from '@/components/article-body';
 
 export default function ArticleScreen() {
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  const { session } = useAuth();
+  const {
+    articles,
+    likedIds,
+    savedIds,
+    loading,
+    toggleLike,
+    toggleSave,
+  } = useExplore();
 
-  // Find article from repository or state
-  const fallbackArticle = useMemo(() => {
-    return HEALTH_ARTICLES.find((a) => a.slug === slug) || HEALTH_ARTICLES[0];
-  }, [slug]);
+  // Find article from repository state
+  const article = useMemo(() => {
+    return articles.find((a) => a.slug === slug);
+  }, [articles, slug]);
 
-  const [article, setArticle] = useState<DetailedArticle>(fallbackArticle);
-  const [voted, setVoted] = useState(false);
-  const [upvotes, setUpvotes] = useState(fallbackArticle.upvotes);
-  const [isBookmarked, setIsBookmarked] = useState(false);
   const [fontSize, setFontSize] = useState<number>(16);
-
-  // Action checklist state (checked items)
   const [checkedActions, setCheckedActions] = useState<Record<number, boolean>>({});
-
-  // Helpfulness feedback
   const [feedback, setFeedback] = useState<'yes' | 'no' | null>(null);
 
+  const viewedRef = useRef<string | null>(null);
   useEffect(() => {
-    const found = HEALTH_ARTICLES.find((a) => a.slug === slug);
-    if (found) {
-      setArticle(found);
-      setUpvotes(found.upvotes);
+    if (article && viewedRef.current !== article.id) {
+      viewedRef.current = article.id;
+      registerView(article.id);
     }
-    fetchArticleFromSupabase();
-  }, [slug]);
+  }, [article]);
 
-  async function fetchArticleFromSupabase() {
-    try {
-      const { data } = await supabase
-        .from('health_content')
-        .select('*')
-        .eq('slug', slug)
-        .eq('is_published', true)
-        .single();
-
-      if (data) {
-        setArticle((prev) => ({
-          ...prev,
-          title: data.title || prev.title,
-          excerpt: data.excerpt || prev.excerpt,
-          body: data.body || prev.body,
-          views: data.views || prev.views,
-          upvotes: data.upvotes || prev.upvotes,
-        }));
-        setUpvotes(data.upvotes || fallbackArticle.upvotes);
-      }
-    } catch {
-      // Use local repository
-    }
-  }
+  const isLiked = article ? likedIds.has(article.id) : false;
+  const isSaved = article ? savedIds.has(article.id) : false;
 
   const handleVote = () => {
-    if (!voted) {
-      setVoted(true);
-      setUpvotes((prev) => prev + 1);
-    } else {
-      setVoted(false);
-      setUpvotes((prev) => prev - 1);
-    }
+    if (!article) return;
+    toggleLike(article.id);
   };
 
   const handleToggleBookmark = () => {
-    const next = !isBookmarked;
-    setIsBookmarked(next);
-    Alert.alert(
-      next ? 'Đã lưu bài viết 📌' : 'Đã bỏ lưu',
-      next ? 'Bài viết đã được thêm vào danh sách yêu thích của bạn.' : 'Đã xóa khỏi danh sách lưu.'
-    );
+    if (!article) return;
+    toggleSave(article.id);
   };
 
   const handleShare = async () => {
+    if (!article) return;
     try {
       await Share.share({
         message: `Đọc bài viết y khoa hữu ích: "${article.title}" trên Healthy Check!`,
@@ -110,10 +78,37 @@ export default function ArticleScreen() {
 
   // Related articles
   const relatedArticles = useMemo(() => {
-    return HEALTH_ARTICLES.filter(
+    if (!article) return [];
+    return articles.filter(
       (a) => a.slug !== article.slug && (a.category === article.category || a.tags.some((t) => article.tags.includes(t)))
     ).slice(0, 2);
-  }, [article]);
+  }, [article, articles]);
+
+  if (!article) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.appBar}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.notFoundContainer}>
+          {loading ? (
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          ) : (
+            <>
+              <Ionicons name="document-text-outline" size={64} color={COLORS.textTertiary} />
+              <Text style={styles.notFoundTitle}>Không tìm thấy bài viết</Text>
+              <Text style={styles.notFoundSub}>Bài viết không tồn tại hoặc đã bị gỡ bỏ.</Text>
+              <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+                <Text style={styles.backBtnText}>Quay lại</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  }
 
   const catColor = getCategoryColor(article.category);
 
@@ -137,9 +132,9 @@ export default function ArticleScreen() {
           {/* Bookmark */}
           <TouchableOpacity style={styles.actionBtn} onPress={handleToggleBookmark}>
             <Ionicons
-              name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+              name={isSaved ? 'bookmark' : 'bookmark-outline'}
               size={22}
-              color={isBookmarked ? COLORS.primary : COLORS.textPrimary}
+              color={isSaved ? COLORS.primary : COLORS.textPrimary}
             />
           </TouchableOpacity>
 
@@ -179,7 +174,9 @@ export default function ArticleScreen() {
               <Text style={styles.authorName}>{article.author}</Text>
               <Ionicons name="checkmark-circle" size={16} color="#0EA5E9" style={{ marginLeft: 4 }} />
             </View>
-            <Text style={styles.authorRole}>{article.author_role}</Text>
+            {article.author_role ? (
+              <Text style={styles.authorRole}>{article.author_role}</Text>
+            ) : null}
             <Text style={styles.verifiedStamp}>Đã kiểm định y khoa bởi Hội đồng Bác sĩ G7</Text>
           </View>
         </View>
@@ -200,30 +197,16 @@ export default function ArticleScreen() {
           </View>
         )}
 
-        {/* Main Article Body */}
+        {/* Main Article Body Rendered via ArticleBody */}
         <View style={styles.bodyContainer}>
-          {article.body.split('\n\n').map((paragraph, pIdx) => {
-            const isHeading = paragraph.length < 60 && !paragraph.includes('.') && !paragraph.includes(':');
-            return (
-              <Text
-                key={pIdx}
-                style={[
-                  styles.paragraph,
-                  { fontSize, lineHeight: fontSize * 1.6 },
-                  isHeading && styles.subHeading,
-                ]}
-              >
-                {paragraph}
-              </Text>
-            );
-          })}
+          <ArticleBody body={article.body} fontSize={fontSize} />
         </View>
 
         {/* Expert Quotation Block */}
         {article.quote && (
           <View style={styles.quoteCard}>
             <Ionicons name="chatbubble-ellipses-outline" size={28} color={catColor} style={{ marginBottom: 8 }} />
-            <Text style={styles.quoteText}>"{article.quote.text}"</Text>
+            <Text style={styles.quoteText}>{`“${article.quote.text}”`}</Text>
             <Text style={styles.quoteAuthor}>— {article.quote.author}</Text>
           </View>
         )}
@@ -281,7 +264,7 @@ export default function ArticleScreen() {
               style={[styles.feedbackBtn, feedback === 'yes' && styles.feedbackBtnActive]}
               onPress={() => {
                 setFeedback('yes');
-                if (!voted) handleVote();
+                if (!isLiked) handleVote();
               }}
             >
               <Ionicons name="thumbs-up" size={18} color={feedback === 'yes' ? '#FFFFFF' : COLORS.primary} />
@@ -299,13 +282,13 @@ export default function ArticleScreen() {
 
           {/* Big Heart Like Button */}
           <TouchableOpacity
-            style={[styles.bigVoteBtn, voted && styles.bigVoteBtnActive]}
+            style={[styles.bigVoteBtn, isLiked && styles.bigVoteBtnActive]}
             onPress={handleVote}
             activeOpacity={0.8}
           >
-            <Ionicons name={voted ? 'heart' : 'heart-outline'} size={24} color={voted ? '#FFFFFF' : '#EF4444'} />
-            <Text style={[styles.bigVoteText, voted && styles.bigVoteTextActive]}>
-              {voted ? 'Đã yêu thích' : 'Thả tim bài viết'} ({upvotes})
+            <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={24} color={isLiked ? '#FFFFFF' : '#EF4444'} />
+            <Text style={[styles.bigVoteText, isLiked && styles.bigVoteTextActive]}>
+              {isLiked ? 'Đã yêu thích' : 'Thả tim bài viết'} ({article.upvotes})
             </Text>
           </TouchableOpacity>
         </View>
@@ -338,6 +321,7 @@ export default function ArticleScreen() {
 
 function getCategoryColor(cat: string): string {
   const colors: Record<string, string> = {
+    saved: COLORS.primary,
     nutrition: '#D97706',
     sports: '#10B981',
     running: '#0284C7',
@@ -351,6 +335,7 @@ function getCategoryColor(cat: string): string {
 
 function getCategoryLabel(cat: string): string {
   const labels: Record<string, string> = {
+    saved: 'Đã lưu',
     nutrition: 'Dinh dưỡng',
     sports: 'Thể thao',
     running: 'Chạy bộ',
@@ -446,18 +431,6 @@ const styles = StyleSheet.create({
   takeawayRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
   takeawayText: { flex: 1, fontSize: 12, color: '#78350F', lineHeight: 18, fontFamily: FONT_FAMILY.base as string },
   bodyContainer: { marginBottom: 20 },
-  paragraph: {
-    color: COLORS.textPrimary,
-    marginBottom: 16,
-    fontFamily: FONT_FAMILY.base as string,
-  },
-  subHeading: {
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-    fontFamily: FONT_FAMILY.bold as string,
-    marginTop: 8,
-    marginBottom: 6,
-  },
   quoteCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 18,
@@ -539,7 +512,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: 20,
     borderWidth: 1.5,
     borderColor: '#EF4444',
     backgroundColor: '#FEF2F2',
@@ -565,4 +538,37 @@ const styles = StyleSheet.create({
   relatedCategory: { fontSize: 10, fontWeight: 'bold', color: COLORS.primary, textTransform: 'uppercase', marginBottom: 4, fontFamily: FONT_FAMILY.bold as string },
   relatedTitle: { fontSize: 13, fontWeight: 'bold', color: COLORS.textPrimary, lineHeight: 18, marginBottom: 4, fontFamily: FONT_FAMILY.bold as string },
   relatedAuthor: { fontSize: 11, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
+  notFoundContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 30,
+  },
+  notFoundTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+    marginTop: 16,
+    fontFamily: FONT_FAMILY.bold as string,
+  },
+  notFoundSub: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 6,
+    textAlign: 'center',
+    fontFamily: FONT_FAMILY.base as string,
+  },
+  backBtn: {
+    marginTop: 20,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  backBtnText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: FONT_FAMILY.bold as string,
+  },
 });
