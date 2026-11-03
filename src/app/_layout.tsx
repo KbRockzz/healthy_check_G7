@@ -65,6 +65,7 @@ function LayoutContent() {
         <Stack.Screen name="dashboard/nutrition" options={{ title: 'Nutrition' }} />
         <Stack.Screen name="dashboard/cycle" options={{ title: 'Cycle' }} />
         <Stack.Screen name="dashboard/water" options={{ title: 'Uống nước' }} />
+        <Stack.Screen name="dashboard/shared" options={{ title: 'Chia sẻ' }} />
         <Stack.Screen name="health-data" options={{ title: 'Health Data' }} />
         <Stack.Screen name="explore" options={{ title: 'Explore' }} />
         <Stack.Screen name="explore/[slug]" options={{ title: 'Bài viết' }} />

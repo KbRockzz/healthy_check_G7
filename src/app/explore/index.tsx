@@ -2,7 +2,7 @@
  * Màn hình Khám phá kiến thức y tế (Explore Screen)
  * Kho bài viết phong phú, phân loại chi tiết, bộ lọc thông minh & tìm kiếm
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert,
@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
-import { HEALTH_ARTICLES, DetailedArticle } from '@/data/health-articles';
+import { HealthContent } from '@/lib/supabase';
 import BottomTabBar from '@/components/bottom-tab-bar';
 
 type Category = 'all' | 'nutrition' | 'sleep' | 'running' | 'womens_health' | 'sports' | 'mental_health';
@@ -28,14 +28,156 @@ const CATEGORY_TABS: { label: string; value: Category; icon: string }[] = [
   { label: 'Tâm lý', value: 'mental_health', icon: 'leaf-outline' },
 ];
 
+// Extended interface with additional UI fields
+interface DetailedArticle extends HealthContent {
+  author_role: string;
+  author_avatar?: string;
+  key_takeaways: string[];
+  quote?: {
+    text: string;
+    author: string;
+  };
+  action_tips: string[];
+}
+
+// Map DB category to UI fields
+function enrichArticleFromDB(art: HealthContent): DetailedArticle {
+  const authorRoles: Record<string, string> = {
+    'nutrition': 'Chuyên gia Dinh dưỡng',
+    'sleep': 'Chuyên gia Y học Giấc ngủ',
+    'running': 'Huấn luyện viên Chạy bộ',
+    'womens_health': 'Bác sĩ Sản phụ khoa',
+    'sports': 'Huấn luyện viên Thể thao',
+    'mental_health': 'Chuyên gia Tâm lý',
+  };
+  const categoriesWithTags: Record<string, string[]> = {
+    'nutrition': ['dinh_duong', 'trao_doi_chat'],
+    'sleep': ['giac_ngu', 'phuc_hoi'],
+    'running': ['chay_bo', 'tap_luyen'],
+    'womens_health': ['phu_nu', 'hormone'],
+    'sports': ['the_thao', 'phuc_hoi'],
+    'mental_health': ['tam_ly', 'thien_an'],
+  };
+  const categoriesWithQuotes: Record<string, { text: string; author: string }> = {
+    'nutrition': {
+      text: 'Thực phẩm bạn ăn mỗi ngày có thể là liều thuốc an toàn nhất hoặc là chất độc tích tụ chậm nhất.',
+      author: 'Chuyên gia Dinh dưỡng',
+    },
+    'sleep': {
+      text: 'Giấc ngủ không phải là sự nghỉ ngơi, mà là quá trình phục hồi và tái tạo thiết yếu nhất.',
+      author: 'Chuyên gia Y học Giấc ngủ',
+    },
+    'running': {
+      text: 'Chạy bộ không phải là chạy nhanh, mà là chạy đều đặn và kiên trì.',
+      author: 'Huấn luyện viên Chạy bộ',
+    },
+    'womens_health': {
+      text: 'Hiểu cơ thể mình là bước đầu tiên để chăm sóc sức khỏe toàn diện.',
+      author: 'Bác sĩ Sản phụ khoa',
+    },
+    'sports': {
+      text: 'Thể thao không chỉ rèn cơ thể, mà còn rèn ý chí.',
+      author: 'Huấn luyện viên Thể thao',
+    },
+    'mental_health': {
+      text: 'Sức khỏe tâm thần quan trọng không kém sức khỏe thể chất.',
+      author: 'Chuyên gia Tâm lý',
+    },
+  };
+  const categoriesWithActions: Record<string, string[]> = {
+    'nutrition': [
+      'Uống 1 cốc nước ấm cùng vài giọt chanh vào mỗi buổi sáng.',
+      'Đảm bảo mỗi bữa chính luôn có ít nhất 25-30g protein chất lượng cao.',
+      'Bổ sung quả mọng hoặc một nắm nhỏ hạt hạnh nhân vào bữa phụ.',
+    ],
+    'sleep': [
+      'Cố định giờ thức dậy, kể cả cuối tuần.',
+      'Cắt caffeine sau 14h, phòng ngủ 26-28°C.',
+      'Tắt màn hình 45 phút trước giờ ngủ mục tiêu.',
+    ],
+    'running': [
+      'Tăng cự ly không quá 10% mỗi tuần.',
+      'Xen kẽ đi bộ - chạy để tránh chấn thương.',
+      'Theo dõi Steps để biết khi nào đang quá tải.',
+    ],
+    'womens_health': [
+      'Ghi nhận triệu chứng mỗi ngày để tìm quy luật.',
+      'Ăn đủ protein để ổn định đường huyết.',
+      'Ngủ đủ 7 tiếng để giảm cơn thèm ăn.',
+    ],
+    'sports': [
+      'Tập lực 3-4 lần/tuần, xen kẽ cardio.',
+      'Protein sau tập trong vòng 30 phút.',
+      'Ngủ 7-9 tiếng để phục hồi cơ bắp.',
+    ],
+    'mental_health': [
+      'Thiền 5-10 phút mỗi ngày.',
+      'Ghi nhật ký cảm xúc hàng ngày.',
+      'Hạn chế mạng xã hội trước khi ngủ.',
+    ],
+  };
+
+  return {
+    ...art,
+    author_role: authorRoles[art.category] || 'Chuyên gia Healthy Check',
+    author_avatar: undefined,
+    key_takeaways: [],
+    quote: categoriesWithQuotes[art.category],
+    action_tips: categoriesWithActions[art.category] || [],
+    tags: art.tags || categoriesWithTags[art.category] || [],
+  };
+}
+
 export default function ExploreScreen() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
-  const [articles, setArticles] = useState<DetailedArticle[]>(HEALTH_ARTICLES);
+  const [articles, setArticles] = useState<DetailedArticle[]>([]);
   const [category, setCategory] = useState<Category>('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [likedArticles, setLikedArticles] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+
+  const fetchArticles = useCallback(async () => {
+    if (!session) return;
+    try {
+      setLoading(true);
+      // Fetch articles with their upvote counts from DB
+      const { data, error } = await supabase
+        .from('health_content')
+        .select('*')
+        .eq('is_published', true)
+        .order('published_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch user's vote state
+      if (session.user?.id) {
+        const { data: votesData } = await supabase
+          .from('content_votes')
+          .select('content_id, voted')
+          .eq('user_id', session.user.id);
+
+        if (votesData) {
+          const voteMap: Record<string, boolean> = {};
+          votesData.forEach(v => {
+            voteMap[v.content_id] = v.voted;
+          });
+          setLikedArticles(voteMap);
+        }
+      }
+
+      if (data && data.length > 0) {
+        // Enrich DB articles with UI fields
+        const enriched = data.map(enrichArticleFromDB);
+        setArticles(enriched);
+      }
+    } catch (err) {
+      console.error('Fetch articles error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [session]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -44,35 +186,7 @@ export default function ExploreScreen() {
       return;
     }
     fetchArticles();
-  }, [session, authLoading]);
-
-  async function fetchArticles() {
-    try {
-      const { data } = await supabase
-        .from('health_content')
-        .select('*')
-        .eq('is_published', true);
-
-      if (data && data.length > 0) {
-        // Merge Supabase upvotes/views if available
-        setArticles(prev =>
-          prev.map(localArt => {
-            const serverArt = data.find((d: any) => d.slug === localArt.slug);
-            if (serverArt) {
-              return {
-                ...localArt,
-                views: serverArt.views || localArt.views,
-                upvotes: serverArt.upvotes || localArt.upvotes,
-              };
-            }
-            return localArt;
-          })
-        );
-      }
-    } catch {
-      // Keep local repository
-    }
-  }
+  }, [session, authLoading, fetchArticles]);
 
   // Count articles per category
   const categoryCounts = useMemo(() => {
@@ -117,12 +231,17 @@ export default function ExploreScreen() {
     router.push({ pathname: '/explore/[slug]', params: { slug } });
   };
 
-  const handleToggleLike = (articleId: string) => {
-    const isLiked = likedArticles[articleId];
-    setLikedArticles(prev => ({ ...prev, [articleId]: !isLiked }));
+  const handleToggleLike = async (article: DetailedArticle) => {
+    if (!session?.user?.id || !article) return;
+
+    const isLiked = likedArticles[article.id];
+    const newVote = !isLiked;
+
+    // Optimistic update
+    setLikedArticles(prev => ({ ...prev, [article.id]: newVote }));
     setArticles(prev =>
       prev.map(art => {
-        if (art.id === articleId) {
+        if (art.id === article.id) {
           return {
             ...art,
             upvotes: isLiked ? art.upvotes - 1 : art.upvotes + 1,
@@ -131,6 +250,41 @@ export default function ExploreScreen() {
         return art;
       })
     );
+
+    // Call RPC to persist vote in DB
+    try {
+      const { data, error } = await supabase.rpc('vote_article', {
+        p_content: article.id,
+        p_vote: newVote,
+      });
+
+      if (error) throw error;
+
+      // Update with actual count from DB
+      setArticles(prev =>
+        prev.map(art => {
+          if (art.id === article.id) {
+            return { ...art, upvotes: data as number };
+          }
+          return art;
+        })
+      );
+    } catch (err) {
+      console.error('Vote error:', err);
+      // Revert on error
+      setLikedArticles(prev => ({ ...prev, [article.id]: isLiked }));
+      setArticles(prev =>
+        prev.map(art => {
+          if (art.id === article.id) {
+            return {
+              ...art,
+              upvotes: isLiked ? art.upvotes + 1 : art.upvotes - 1,
+            };
+          }
+          return art;
+        })
+      );
+    }
   };
 
   const handleTagPress = (tag: string) => {
@@ -324,7 +478,7 @@ export default function ExploreScreen() {
                     <TouchableOpacity
                       onPress={(e) => {
                         e.stopPropagation();
-                        handleToggleLike(art.id);
+                        handleToggleLike(art);
                       }}
                       style={styles.heartBtn}
                     >

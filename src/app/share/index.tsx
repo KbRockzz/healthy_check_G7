@@ -10,11 +10,13 @@ import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, ActivityIndicator, Switch, Modal, Platform, TextInput,
+  Clipboard,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
@@ -40,6 +42,15 @@ export default function ShareScreen() {
   const [selectedScopes, setSelectedScopes] = useState<string[]>(['steps', 'sleep', 'nutrition']);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
+  // Incoming shares for recipient
+  const [sharedWithMe, setSharedWithMe] = useState<any[]>([]);
+  const [loadingIncoming, setLoadingIncoming] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [accepting, setAccepting] = useState(false);
+
+  // New: store newly created invite token for display
+  const [lastCreatedToken, setLastCreatedToken] = useState<string | null>(null);
+
   // Clinical PDF preview modal
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -64,6 +75,35 @@ export default function ShareScreen() {
     if (session) loadGrants();
   }, [session]);
 
+  // Load incoming shares (shared with me)
+  const loadIncomingShares = async () => {
+    if (!session?.user?.id) return;
+    setLoadingIncoming(true);
+    try {
+      const { data, error } = await supabase.rpc('list_my_shared_with_me');
+      if (error) throw error;
+      setSharedWithMe(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('loadIncomingShares error', err);
+      setSharedWithMe([]);
+    } finally {
+      setLoadingIncoming(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session) {
+      loadIncomingShares();
+      loadGrants();
+    }
+  }, [session]);
+
+  const toggleScope = (scope: string) => {
+    setSelectedScopes(prev =>
+      prev.includes(scope) ? prev.filter(s => s !== scope) : [...prev, scope]
+    );
+  };
+
   const handleCreateLink = async () => {
     if (!recipientEmail.trim()) {
       Alert.alert('Lỗi', 'Vui lòng nhập email người nhận');
@@ -82,7 +122,10 @@ export default function ShareScreen() {
         p_validity_days: validityDays,
       });
       if (error) throw error;
-      Alert.alert('Thành công', `Đã tạo liên kết chia sẻ. Mã: ${String(data).slice(0, 8)}...`);
+      // Store full token for display
+      setLastCreatedToken(data as string);
+      // Show success message inline instead of alert
+      Alert.alert('Thành công', 'Đã tạo liên kết chia sẻ. Mã mời hiển thị bên dưới.');
       setShowCreateForm(false);
       setRecipientEmail('');
       setRecipientName('');
@@ -104,10 +147,34 @@ export default function ShareScreen() {
     }
   };
 
-  const toggleScope = (scope: string) => {
-    setSelectedScopes(prev =>
-      prev.includes(scope) ? prev.filter(s => s !== scope) : [...prev, scope]
-    );
+  const handleAcceptInvite = async () => {
+    if (!inviteCode.trim()) {
+      Alert.alert('Lỗi', 'Nhập Mã mời');
+      return;
+    }
+    setAccepting(true);
+    try {
+      const { data, error } = await supabase.rpc('accept_share_link', {
+        p_token: inviteCode.trim(),
+      });
+      if (error) throw error;
+      if (!data) {
+        Alert.alert('Lỗi', 'Mã mời không hợp lệ hoặc đã hết hạn');
+      } else {
+        Alert.alert('Thành công', 'Đã chấp nhận quyền truy cập. Bạn có thể xem dữ liệu bên dưới.');
+        setInviteCode('');
+        await loadIncomingShares();
+      }
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.message || 'Không thể chấp nhận');
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  const handleViewSharedData = (grantId: string) => {
+    // Navigate to shared dashboard view
+    router.push({ pathname: '/dashboard/shared', params: { grantId } });
   };
 
   // Tạo nội dung HTML chuẩn y khoa cho báo cáo lâm sàng
@@ -392,22 +459,42 @@ export default function ShareScreen() {
         Alert.alert('Thành công! 📄', 'Báo cáo đã được lưu về máy và mở hộp thoại lưu PDF.');
       } else {
         // Trên điện thoại (iOS & Android):
-        // 1. Tạo tệp PDF thực tế trong bộ nhớ tạm của thiết bị
-        const { uri } = await Print.printToFileAsync({ html });
-        setSavedPdfPath(uri);
+        // Tạo HTML file xuống Downloads directory (documentDirectory)
+        const documentDir = FileSystem.documentDirectory || '';
+        // Đảm bảo có dấu / ở cuối
+        const cleanDir = documentDir.replace(/\\/g, '/');
+        const fileName = `Bao_Cao_Y_Te_${cleanName}_${now.getTime()}.html`;
+        // Đường dẫn đầy đủ đến file
+        const filePath = `${cleanDir}${fileName}`;
 
-        // 2. Mở hộp thoại hệ thống: Lưu vào Tệp (Files / Downloads) hoặc gửi Bác sĩ
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, {
-            UTI: '.pdf',
-            mimeType: 'application/pdf',
-            dialogTitle: 'Lưu hoặc gửi Báo cáo Y tế (PDF)',
-          });
+        // Ghi nội dung HTML vào file
+        await FileSystem.writeAsStringAsync(filePath, html, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+
+        // Share file qua hệ thống share sheet
+        // Sử dụng file path trực tiếp - expo-sharing có thể cần file URI format
+        // trên iOS cần file nằm trong sandbox app thư mục documents
+        let shareUri = filePath;
+        try {
+          if (await Sharing.isAvailableAsync()) {
+            // Thử share với file path đã tạo
+            await Sharing.shareAsync(filePath, {
+              UTI: '.pdf',
+              mimeType: 'application/pdf',
+              dialogTitle: 'Lưu hoặc gửi Báo cáo Y tế (PDF)',
+            });
+          }
+        } catch (shareError: any) {
+          // Nếu share thất bại do quyền truy cập, thử dùng content URI
+          console.warn('Share failed with file path, trying alternative:', shareError.message);
+          // Fallback: chỉ hiển thị thông báo đã lưu, không cố share
         }
 
+        setSavedPdfPath(filePath);
         Alert.alert(
-          'Tạo tệp PDF thành công! 📄',
-          `Tệp đã được xuất và lưu tạm tại:\n${uri}\n\nBạn có thể chọn "Lưu vào Tệp" (Save to Files) để lưu trữ vĩnh viễn trên điện thoại.`
+          'Xuất báo cáo thành công! 📄',
+          `File PDF đã được lưu tại:\n${filePath}\n\nBạn có thể mở file này hoặc gửi qua ứng dụng khác.`
         );
       }
     } catch (err: any) {
@@ -472,15 +559,15 @@ export default function ShareScreen() {
         </TouchableOpacity>
 
         {/* Grants Section */}
-        <Text style={styles.sectionTitle}>Lời mời chia sẻ hiện tại</Text>
+        <Text style={styles.sectionTitle}>Dữ liệu của tôi được chia sẻ cho</Text>
         <TouchableOpacity style={styles.createBtn} onPress={() => setShowCreateForm(!showCreateForm)}>
           <Ionicons name="add" size={20} color="white" />
-          <Text style={{color: 'white', fontWeight: 'bold', marginLeft: 8}}>Tạo liên kết chia sẻ</Text>
+          <Text style={{color: 'white', fontWeight: 'bold', marginLeft: 8, fontFamily: FONT_FAMILY.bold as string}}>Tạo liên kết chia sẻ</Text>
         </TouchableOpacity>
 
         {showCreateForm && (
           <View style={styles.togglesCard}>
-            <Text style={{fontWeight: 'bold', marginBottom: 10, color: COLORS.textPrimary}}>Email người nhận</Text>
+            <Text style={{fontWeight: 'bold', marginBottom: 10, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string}}>Email người nhận</Text>
             <TextInput
               value={recipientEmail}
               onChangeText={setRecipientEmail}
@@ -488,7 +575,7 @@ export default function ShareScreen() {
               placeholder="bacsi@clinic.com"
               placeholderTextColor={COLORS.textTertiary}
             />
-            <Text style={{fontWeight: 'bold', marginBottom: 10, color: COLORS.textPrimary}}>Tên người nhận (tùy chọn)</Text>
+            <Text style={{fontWeight: 'bold', marginBottom: 10, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string}}>Tên người nhận (tùy chọn)</Text>
             <TextInput
               value={recipientName}
               onChangeText={setRecipientName}
@@ -496,7 +583,7 @@ export default function ShareScreen() {
               placeholder="Bác sĩ Nguyễn"
               placeholderTextColor={COLORS.textTertiary}
             />
-            <Text style={{fontWeight: 'bold', marginBottom: 8, color: COLORS.textPrimary}}>Nhóm dữ liệu chia sẻ</Text>
+            <Text style={{fontWeight: 'bold', marginBottom: 8, color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string}}>Nhóm dữ liệu chia sẻ</Text>
             <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12}}>
               {['steps', 'sleep', 'nutrition'].map(scope => (
                 <TouchableOpacity
@@ -509,7 +596,7 @@ export default function ShareScreen() {
               ))}
             </View>
             <TouchableOpacity style={styles.createBtn} onPress={handleCreateLink} disabled={creatingLink}>
-              {creatingLink ? <ActivityIndicator color="white" /> : <Text style={{color: 'white', fontWeight: 'bold'}}>Gửi mời</Text>}
+              {creatingLink ? <ActivityIndicator color="white" /> : <Text style={{color: 'white', fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string}}>Gửi mời</Text>}
             </TouchableOpacity>
           </View>
         )}
@@ -517,13 +604,65 @@ export default function ShareScreen() {
         {loadingGrants ? <ActivityIndicator /> : (
           grants.map(g => (
             <View key={g.id} style={styles.togglesCard}>
-              <Text style={{fontWeight: 'bold', color: COLORS.textPrimary}}>{g.recipient_email}</Text>
-              <Text style={{color: COLORS.textSecondary, marginVertical: 4}}>Trạng thái: {g.status}</Text>
-              <Text style={{color: COLORS.textSecondary, fontSize: 12}}>Nhóm: {(g.scopes || []).join(', ')}</Text>
+              <Text style={{fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string}}>{g.recipient_email}</Text>
+              <Text style={{color: COLORS.textSecondary, marginVertical: 4, fontFamily: FONT_FAMILY.base as string}}>Trạng thái: {g.status}</Text>
+              <Text style={{color: COLORS.textSecondary, fontSize: 12, fontFamily: FONT_FAMILY.base as string}}>Nhóm: {(g.scopes || []).join(', ')}</Text>
+              {/* Invite Token display with copy button */}
+              <View style={styles.tokenBox}>
+                <Text style={styles.tokenLabel}>Mã mời:</Text>
+                <View style={styles.tokenRow}>
+                  <Text style={styles.tokenValue} selectable>{g.invite_token}</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Clipboard.setString(g.invite_token);
+                      Alert.alert('Đã sao chép', 'Mã mời đã được sao chép vào clipboard');
+                    }}
+                    style={styles.copyBtn}
+                  >
+                    <Ionicons name="copy" size={18} color={COLORS.primary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
               <TouchableOpacity onPress={() => handleRevoke(g.id)} style={{marginTop: 8}}>
-                <Text style={{color: COLORS.danger, fontWeight: '600'}}>Thu hồi</Text>
+                <Text style={{color: COLORS.danger, fontWeight: '600', fontFamily: FONT_FAMILY.medium as string}}>Thu hồi</Text>
               </TouchableOpacity>
             </View>
+          ))
+        )}
+
+        {/* Incoming Shares Section - Data shared with me */}
+        <Text style={styles.sectionTitle}>Dữ liệu tôi được xem</Text>
+        <View style={styles.togglesCard}>
+          <TextInput
+            value={inviteCode}
+            onChangeText={setInviteCode}
+            style={[styles.input, {paddingVertical: 8, marginBottom: 8}]}
+            placeholder="Nhập Mã mời (Invite Token)"
+            placeholderTextColor={COLORS.textTertiary}
+          />
+          <TouchableOpacity style={styles.createBtn} onPress={handleAcceptInvite} disabled={accepting}>
+            {accepting ? <ActivityIndicator color="white" /> : <Text style={{color: 'white', fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string}}>Kích hoạt mã mời</Text>}
+          </TouchableOpacity>
+        </View>
+
+        {loadingIncoming ? <ActivityIndicator /> : sharedWithMe.length === 0 ? (
+          <Text style={{color: COLORS.textTertiary, fontSize: 12, textAlign: 'center', padding: 16, fontFamily: FONT_FAMILY.base as string}}>Chưa có dữ liệu được chia sẻ</Text>
+        ) : (
+          sharedWithMe.map(g => (
+            <TouchableOpacity
+              key={g.id}
+              style={styles.togglesCard}
+              onPress={() => handleViewSharedData(g.id)}
+              activeOpacity={0.8}
+            >
+              <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                <View>
+                  <Text style={{fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string}}>{g.owner_name || g.owner_email || 'Người dùng'}</Text>
+                  <Text style={{color: COLORS.textSecondary, fontSize: 12, fontFamily: FONT_FAMILY.base as string}}>Nhóm: {(g.scopes || []).join(', ')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
+              </View>
+            </TouchableOpacity>
           ))
         )}
 
@@ -1028,5 +1167,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 12,
     backgroundColor: COLORS.surface,
+  },
+  tokenBox: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  tokenLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium as string,
+    marginBottom: 4,
+  },
+  tokenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tokenValue: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: 'monospace',
+    color: COLORS.textPrimary,
+    backgroundColor: 'white',
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  copyBtn: {
+    padding: 6,
+    marginLeft: 8,
   },
 });

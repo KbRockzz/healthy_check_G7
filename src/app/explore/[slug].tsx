@@ -6,33 +6,119 @@
  * - Danh sách việc cần làm tương tác (Interactive Action Checklist)
  * - Nút yêu thích, lưu bài viết (Bookmark), chia sẻ & Đề xuất bài viết liên quan
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, Share, Platform,
+  Alert, Share, Platform, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
-import { HEALTH_ARTICLES, DetailedArticle } from '@/data/health-articles';
+import { HealthContent } from '@/lib/supabase';
+
+interface DetailedArticle extends HealthContent {
+  author_role: string;
+  author_avatar?: string;
+  key_takeaways: string[];
+  quote?: {
+    text: string;
+    author: string;
+  };
+  action_tips: string[];
+}
+
+function enrichArticleFromDB(art: HealthContent): DetailedArticle {
+  const authorRoles: Record<string, string> = {
+    'nutrition': 'Chuyên gia Dinh dưỡng',
+    'sleep': 'Chuyên gia Y học Giấc ngủ',
+    'running': 'Huấn luyện viên Chạy bộ',
+    'womens_health': 'Bác sĩ Sản phụ khoa',
+    'sports': 'Huấn luyện viên Thể thao',
+    'mental_health': 'Chuyên gia Tâm lý',
+  };
+  const categoriesWithQuotes: Record<string, { text: string; author: string }> = {
+    'nutrition': {
+      text: 'Thực phẩm bạn ăn mỗi ngày có thể là liều thuốc an toàn nhất hoặc là chất độc tích tụ chậm nhất.',
+      author: 'Chuyên gia Dinh dưỡng',
+    },
+    'sleep': {
+      text: 'Giấc ngủ không phải là sự nghỉ ngơi, mà là quá trình phục hồi và tái tạo thiết yếu nhất.',
+      author: 'Chuyên gia Y học Giấc ngủ',
+    },
+    'running': {
+      text: 'Chạy bộ không phải là chạy nhanh, mà là chạy đều đặn và kiên trì.',
+      author: 'Huấn luyện viên Chạy bộ',
+    },
+    'womens_health': {
+      text: 'Hiểu cơ thể mình là bước đầu tiên để chăm sóc sức khỏe toàn diện.',
+      author: 'Bác sĩ Sản phụ khoa',
+    },
+    'sports': {
+      text: 'Thể thao không chỉ rèn cơ thể, mà còn rèn ý chí.',
+      author: 'Huấn luyện viên Thể thao',
+    },
+    'mental_health': {
+      text: 'Sức khỏe tâm thần quan trọng không kém sức khỏe thể chất.',
+      author: 'Chuyên gia Tâm lý',
+    },
+  };
+  const categoriesWithActions: Record<string, string[]> = {
+    'nutrition': [
+      'Uống 1 cốc nước ấm cùng vài giọt chanh vào mỗi buổi sáng.',
+      'Đảm bảo mỗi bữa chính luôn có ít nhất 25-30g protein chất lượng cao.',
+      'Bổ sung quả mọng hoặc một nắm nhỏ hạt hạnh nhân vào bữa phụ.',
+    ],
+    'sleep': [
+      'Cố định giờ thức dậy, kể cả cuối tuần.',
+      'Cắt caffeine sau 14h, phòng ngủ 26-28°C.',
+      'Tắt màn hình 45 phút trước giờ ngủ mục tiêu.',
+    ],
+    'running': [
+      'Tăng cự ly không quá 10% mỗi tuần.',
+      'Xen kẽ đi bộ - chạy để tránh chấn thương.',
+      'Theo dõi Steps để biết khi nào đang quá tải.',
+    ],
+    'womens_health': [
+      'Ghi nhận triệu chứng mỗi ngày để tìm quy律.',
+      'Ăn đủ protein để ổn định đường huyết.',
+      'Ngủ đủ 7 tiếng để giảm cơn thèm ăn.',
+    ],
+    'sports': [
+      'Tập lực 3-4 lần/tuần, xen kẽ cardio.',
+      'Protein sau tập trong vòng 30 phút.',
+      'Ngủ 7-9 tiếng để phục hồi cơ bắp.',
+    ],
+    'mental_health': [
+      'Thiền 5-10 phút mỗi ngày.',
+      'Ghi nhật ký cảm xúc hàng ngày.',
+      'Hạn chế mạng xã hội trước khi ngủ.',
+    ],
+  };
+
+  return {
+    ...art,
+    author_role: authorRoles[art.category] || 'Chuyên gia Healthy Check',
+    author_avatar: undefined,
+    key_takeaways: [],
+    quote: categoriesWithQuotes[art.category],
+    action_tips: categoriesWithActions[art.category] || [],
+    tags: art.tags || [],
+  };
+}
 
 export default function ArticleScreen() {
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { session } = useAuth();
 
-  // Find article from repository or state
-  const fallbackArticle = useMemo(() => {
-    return HEALTH_ARTICLES.find((a) => a.slug === slug) || HEALTH_ARTICLES[0];
-  }, [slug]);
-
-  const [article, setArticle] = useState<DetailedArticle>(fallbackArticle);
+  const [article, setArticle] = useState<DetailedArticle | null>(null);
   const [voted, setVoted] = useState(false);
-  const [upvotes, setUpvotes] = useState(fallbackArticle.upvotes);
+  const [upvotes, setUpvotes] = useState(0);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [fontSize, setFontSize] = useState<number>(16);
+  const [loading, setLoading] = useState(true);
 
   // Action checklist state (checked items)
   const [checkedActions, setCheckedActions] = useState<Record<number, boolean>>({});
@@ -40,39 +126,34 @@ export default function ArticleScreen() {
   // Helpfulness feedback
   const [feedback, setFeedback] = useState<'yes' | 'no' | null>(null);
 
-  useEffect(() => {
-    const found = HEALTH_ARTICLES.find((a) => a.slug === slug);
-    if (found) {
-      setArticle(found);
-      setUpvotes(found.upvotes);
-    }
-    fetchArticleFromSupabase();
-  }, [slug]);
-
-  async function fetchArticleFromSupabase() {
+  const fetchArticle = useCallback(async () => {
+    if (!slug) return;
     try {
-      const { data } = await supabase
+      setLoading(true);
+      const { data, error } = await supabase
         .from('health_content')
         .select('*')
         .eq('slug', slug)
         .eq('is_published', true)
         .single();
 
+      if (error) throw error;
+
       if (data) {
-        setArticle((prev) => ({
-          ...prev,
-          title: data.title || prev.title,
-          excerpt: data.excerpt || prev.excerpt,
-          body: data.body || prev.body,
-          views: data.views || prev.views,
-          upvotes: data.upvotes || prev.upvotes,
-        }));
-        setUpvotes(data.upvotes || fallbackArticle.upvotes);
+        const enriched = enrichArticleFromDB(data);
+        setArticle(enriched);
+        setUpvotes(data.upvotes || 0);
       }
-    } catch {
-      // Use local repository
+    } catch (err) {
+      console.error('Fetch article error:', err);
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [slug]);
+
+  useEffect(() => {
+    fetchArticle();
+  }, [fetchArticle]);
 
   const handleVote = () => {
     if (!voted) {
@@ -94,6 +175,7 @@ export default function ArticleScreen() {
   };
 
   const handleShare = async () => {
+    if (!article) return;
     try {
       await Share.share({
         message: `Đọc bài viết y khoa hữu ích: "${article.title}" trên Healthy Check!`,
@@ -108,14 +190,48 @@ export default function ArticleScreen() {
     setCheckedActions((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
 
-  // Related articles
-  const relatedArticles = useMemo(() => {
-    return HEALTH_ARTICLES.filter(
-      (a) => a.slug !== article.slug && (a.category === article.category || a.tags.some((t) => article.tags.includes(t)))
-    ).slice(0, 2);
-  }, [article]);
+  // Related articles - fetch from DB
+  const [relatedArticles, setRelatedArticles] = useState<DetailedArticle[]>([]);
 
-  const catColor = getCategoryColor(article.category);
+  const fetchRelated = useCallback(async () => {
+    if (!article) return;
+    try {
+      const { data } = await supabase
+        .from('health_content')
+        .select('*')
+        .eq('is_published', true)
+        .neq('slug', slug)
+        .order('published_at', { ascending: false })
+        .limit(10);
+
+      if (data && data.length > 0) {
+        const enriched = data.map(enrichArticleFromDB);
+        // Filter by same category or shared tags, then limit to 2
+        const related = enriched
+          .filter((a) => a.category === article.category || a.tags.some((t) => article.tags.includes(t)))
+          .slice(0, 2);
+        setRelatedArticles(related);
+      }
+    } catch {
+      // Ignore
+    }
+  }, [article, slug]);
+
+  useEffect(() => {
+    if (article) {
+      fetchRelated();
+    }
+  }, [article, fetchRelated]);
+
+  const catColor = article ? getCategoryColor(article.category) : COLORS.primary;
+
+  if (loading || !article) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

@@ -29,7 +29,9 @@ export default function HealthDataScreen() {
   const { session, profile, loading: authLoading } = useAuth();
   const [stepsToday, setStepsToday] = useState<number>(0);
   const [waterToday, setWaterToday] = useState<number>(0);
-  const [sleepMins, setSleepMins] = useState<number>(480);
+  const [sleepMins, setSleepMins] = useState<number>(0);
+  const [caloriesToday, setCaloriesToday] = useState<number>(0);
+  const [healthScore, setHealthScore] = useState<number>(0);
   const [cycleInfo, setCycleInfo] = useState<{ day: number; length: number; status: string }>({ day: 1, length: 28, status: 'An toàn' });
   const [loaded, setLoaded] = useState(false);
 
@@ -38,59 +40,48 @@ export default function HealthDataScreen() {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      // 1. Steps
-      const { data: stepsData } = await supabase
-        .from('step_records')
-        .select('steps')
-        .eq('user_id', session.user.id)
-        .eq('recorded_on', today)
-        .single();
-      if (stepsData?.steps) {
-        setStepsToday(stepsData.steps);
-      } else {
-        const savedSteps = await AsyncStorage.getItem(`@healthy_check_steps_${today}`);
-        if (savedSteps) setStepsToday(parseInt(savedSteps, 10));
-      }
+      // Dùng cùng RPC get_dashboard_summary như Dashboard để điểm sức khỏe luôn đồng bộ
+      const { data: summaryData, error: summaryError } = await supabase.rpc('get_dashboard_summary', {
+        p_user: session.user.id,
+        p_day: today,
+      });
 
-      // 2. Water
-      const savedWater = await AsyncStorage.getItem(`@healthy_check_water_${today}`);
-      if (savedWater) setWaterToday(parseInt(savedWater, 10));
+      if (summaryError) throw summaryError;
 
-      // 3. Sleep
-      const { data: sleepData } = await supabase
-        .from('sleep_records')
-        .select('total_minutes')
-        .eq('user_id', session.user.id)
-        .order('sleep_date', { ascending: false })
-        .limit(1);
-      if (sleepData && sleepData.length > 0) {
-        setSleepMins(sleepData[0].total_minutes);
-      }
+      const s = summaryData as any;
+      if (s) {
+        // Health score từ DB (cùng công thức với Dashboard)
+        setHealthScore(s.health_score?.score || 0);
 
-      // 4. Cycle
-      const { data: periodData } = await supabase
-        .from('cycle_periods')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .eq('is_predicted', false)
-        .order('period_start', { ascending: false })
-        .limit(1);
+        // Steps
+        setStepsToday(s.steps?.count || 0);
 
-      if (periodData && periodData.length > 0) {
-        const p = periodData[0];
-        const start = new Date(p.period_start);
-        const now = new Date();
-        const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-        const len = p.cycle_length || 28;
-        const day = ((diffDays % len) + len) % len + 1;
-        const isPeriod = day <= 5;
-        const isOvulation = day >= (len - 14) && day <= (len - 10);
-        const status = isPeriod ? 'Hành kinh' : isOvulation ? 'Rụng trứng' : 'An toàn';
-        setCycleInfo({ day, length: len, status });
+        // Sleep
+        setSleepMins(s.sleep?.total_minutes || 0);
+
+        // Nutrition calories
+        setCaloriesToday(s.nutrition?.calories || 0);
+
+        // Water
+        setWaterToday(s.water || 0);
+
+        // Cycle
+        if (s.cycle?.last_period_start) {
+          const start = new Date(s.cycle.last_period_start);
+          const now = new Date();
+          const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+          const len = s.cycle.cycle_length || 28;
+          const day = ((diffDays % len) + len) % len + 1;
+          const isPeriod = day <= 5;
+          const isOvulation = day >= (len - 14) && day <= (len - 10);
+          const status = isPeriod ? 'Hành kinh' : isOvulation ? 'Rụng trứng' : 'An toàn';
+          setCycleInfo({ day, length: len, status });
+        }
       }
 
       setLoaded(true);
-    } catch {
+    } catch (err) {
+      console.error('HealthData load error:', err);
       setLoaded(true);
     }
   }, [session]);
@@ -137,12 +128,8 @@ export default function HealthDataScreen() {
   // Sleep score: 8 hours (480 mins) = 100%
   const sleepScore = Math.min(100, Math.round((sleepMins / 480) * 100));
 
-  // Health Score (0 - 100)
-  const stepScoreComp = Math.min(30, Math.round((stepsToday / 10000) * 30));
-  const sleepScoreComp = Math.min(30, Math.round((sleepScore / 100) * 30));
-  const waterScoreComp = Math.min(20, Math.round((waterToday / waterGoal) * 20));
-  const nutritionScoreComp = 20; // default healthy baseline
-  const healthScore = stepScoreComp + sleepScoreComp + waterScoreComp + nutritionScoreComp;
+  // Health Score (đã được fetch từ RPC get_dashboard_summary - đồng bộ với Dashboard)
+  // Sử dụng healthScore state thay vì tính local
 
   const metrics: MetricRow[] = [
     // Body
