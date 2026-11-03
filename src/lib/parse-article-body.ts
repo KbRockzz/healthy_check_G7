@@ -104,10 +104,13 @@ export function parseBody(body: string): ArticleBlock[] {
         while (i < lines.length && isBulletLine(lines[i])) {
           bullets.push(stripBullet(lines[i]));
           i++;
-        }
+        } 
         for (const b of bullets) {
           blocks.push({ kind: 'bullet', text: b });
         }
+      } else if (isHeadingLine(lines[i])) {
+        blocks.push({ kind: 'heading', text: stripAtx(lines[i]) });
+        i++;
       } else {
         // Paragraph: nối các dòng không phải bullet cho đến khi gặp bullet/heading.
         const paraLines: string[] = [];

@@ -72,8 +72,6 @@ const [articles, setArticles] = useState<DetailedArticle[]>(HEALTH_ARTICLES);
   // callback), không phải synchronous trong effect body. Đây là pattern
   // async-data-init chuẩn của React; rule set-state-in-effect là false
   // positive với hàm async. Ví dụ: https://react.dev/reference/react/useEffect
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, [load]);
 
   useFocusEffect(
     useCallback(() => {
