@@ -5,21 +5,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert,
+  TextInput, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
+import { COLORS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { supabase } from '@/lib/supabase';
-import { HEALTH_ARTICLES, DetailedArticle } from '@/data/health-articles';
+import { useExplore } from '@/lib/hooks/use-explore';
 import BottomTabBar from '@/components/bottom-tab-bar';
 
-type Category = 'all' | 'nutrition' | 'sleep' | 'running' | 'womens_health' | 'sports' | 'mental_health';
+type Category = 'all' | 'saved' | 'nutrition' | 'sleep' | 'running' | 'womens_health' | 'sports' | 'mental_health';
 type SortOption = 'newest' | 'views' | 'upvotes';
 
 const CATEGORY_TABS: { label: string; value: Category; icon: string }[] = [
   { label: 'Tất cả', value: 'all', icon: 'grid-outline' },
+  { label: 'Đã lưu', value: 'saved', icon: 'bookmark-outline' },
   { label: 'Dinh dưỡng', value: 'nutrition', icon: 'restaurant-outline' },
   { label: 'Giấc ngủ', value: 'sleep', icon: 'moon-outline' },
   { label: 'Chạy bộ', value: 'running', icon: 'walk-outline' },
@@ -31,57 +31,46 @@ const CATEGORY_TABS: { label: string; value: Category; icon: string }[] = [
 export default function ExploreScreen() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
-  const [articles, setArticles] = useState<DetailedArticle[]>(HEALTH_ARTICLES);
+  const {
+    articles,
+    likedIds,
+    savedIds,
+    loading,
+    offline,
+    refresh,
+    toggleLike,
+    toggleSave,
+  } = useExplore();
+
   const [category, setCategory] = useState<Category>('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [likedArticles, setLikedArticles] = useState<Record<string, boolean>>({});
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
     if (!session) {
       router.replace('/auth/sign-in');
-      return;
     }
-    fetchArticles();
   }, [session, authLoading]);
 
-  async function fetchArticles() {
-    try {
-      const { data } = await supabase
-        .from('health_content')
-        .select('*')
-        .eq('is_published', true);
-
-      if (data && data.length > 0) {
-        // Merge Supabase upvotes/views if available
-        setArticles(prev =>
-          prev.map(localArt => {
-            const serverArt = data.find((d: any) => d.slug === localArt.slug);
-            if (serverArt) {
-              return {
-                ...localArt,
-                views: serverArt.views || localArt.views,
-                upvotes: serverArt.upvotes || localArt.upvotes,
-              };
-            }
-            return localArt;
-          })
-        );
-      }
-    } catch {
-      // Keep local repository
-    }
-  }
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  };
 
   // Count articles per category
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: articles.length };
+    const counts: Record<string, number> = {
+      all: articles.length,
+      saved: articles.filter(a => savedIds.has(a.id)).length,
+    };
     articles.forEach(art => {
       counts[art.category] = (counts[art.category] || 0) + 1;
     });
     return counts;
-  }, [articles]);
+  }, [articles, savedIds]);
 
   // Featured article
   const featuredArticle = useMemo(() => {
@@ -91,7 +80,12 @@ export default function ExploreScreen() {
   // Filtered and sorted articles
   const filteredArticles = useMemo(() => {
     let result = articles.filter((art) => {
-      const matchCat = category === 'all' || art.category === category;
+      const matchCat =
+        category === 'all'
+          ? true
+          : category === 'saved'
+          ? savedIds.has(art.id)
+          : art.category === category;
       const q = search.trim().toLowerCase();
       const matchSearch =
         !q ||
@@ -111,26 +105,10 @@ export default function ExploreScreen() {
     }
 
     return result;
-  }, [articles, category, search, sortBy]);
+  }, [articles, category, savedIds, search, sortBy]);
 
   const handleOpenArticle = (slug: string) => {
     router.push({ pathname: '/explore/[slug]', params: { slug } });
-  };
-
-  const handleToggleLike = (articleId: string) => {
-    const isLiked = likedArticles[articleId];
-    setLikedArticles(prev => ({ ...prev, [articleId]: !isLiked }));
-    setArticles(prev =>
-      prev.map(art => {
-        if (art.id === articleId) {
-          return {
-            ...art,
-            upvotes: isLiked ? art.upvotes - 1 : art.upvotes + 1,
-          };
-        }
-        return art;
-      })
-    );
   };
 
   const handleTagPress = (tag: string) => {
@@ -139,7 +117,18 @@ export default function ExploreScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -150,6 +139,16 @@ export default function ExploreScreen() {
             <Ionicons name="person-circle-outline" size={34} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
+
+        {/* Banner Offline */}
+        {offline && !loading && (
+          <View style={styles.offlineBanner}>
+            <Ionicons name="cloud-offline-outline" size={18} color="#B45309" />
+            <Text style={styles.offlineBannerText}>
+              Không kết nối được máy chủ — đang hiển thị nội dung có sẵn trong app.
+            </Text>
+          </View>
+        )}
 
         {/* Quick Stats Pill */}
         <View style={styles.statsRow}>
@@ -213,7 +212,7 @@ export default function ExploreScreen() {
               <Text style={styles.sectionTitle}>📌 Bài viết tiêu điểm</Text>
               <View style={styles.featuredPill}>
                 <Ionicons name="flame" size={14} color="#FFFFFF" />
-                <Text style={styles.featuredPillText}>ĐỌC NHIỀU NHẤT</Text>
+                <Text style={styles.featuredPillText}>NỔI BẬT</Text>
               </View>
             </View>
 
@@ -241,14 +240,31 @@ export default function ExploreScreen() {
                   <View style={styles.authorAvatarWrap}>
                     <Ionicons name="person" size={14} color={COLORS.primary} />
                   </View>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <Text style={styles.featuredAuthor}>{featuredArticle.author}</Text>
-                    <Text style={styles.featuredRole} numberOfLines={1}>{featuredArticle.author_role}</Text>
+                    {featuredArticle.author_role ? (
+                      <Text style={styles.featuredRole} numberOfLines={1}>{featuredArticle.author_role}</Text>
+                    ) : null}
                   </View>
                 </View>
                 <View style={styles.featuredStats}>
                   <Text style={styles.statCount}>👁️ {featuredArticle.views}</Text>
-                  <Text style={styles.statCount}>❤️ {featuredArticle.upvotes}</Text>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleLike(featuredArticle.id);
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    <Ionicons
+                      name={likedIds.has(featuredArticle.id) ? 'heart' : 'heart-outline'}
+                      size={14}
+                      color={likedIds.has(featuredArticle.id) ? '#EF4444' : '#94A3B8'}
+                    />
+                    <Text style={[styles.statCount, likedIds.has(featuredArticle.id) && { color: '#EF4444' }]}>
+                      {featuredArticle.upvotes}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </TouchableOpacity>
@@ -259,7 +275,11 @@ export default function ExploreScreen() {
         <View style={styles.listHeaderRow}>
           <View>
             <Text style={styles.sectionTitle}>
-              {category === 'all' ? 'Tất cả bài viết' : `Chuyên mục: ${getCategoryLabel(category)}`}
+              {category === 'all'
+                ? 'Tất cả bài viết'
+                : category === 'saved'
+                ? 'Bài viết đã lưu'
+                : `Chuyên mục: ${getCategoryLabel(category)}`}
             </Text>
             <Text style={styles.listSubtitle}>Tìm thấy {filteredArticles.length} bài viết</Text>
           </View>
@@ -286,23 +306,40 @@ export default function ExploreScreen() {
 
         {/* Articles List */}
         {filteredArticles.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="search-outline" size={48} color={COLORS.textTertiary} />
-            <Text style={styles.emptyTitle}>Không tìm thấy bài viết</Text>
-            <Text style={styles.emptySub}>Thử tìm từ khóa khác hoặc chuyển sang danh mục "Tất cả"</Text>
-            <TouchableOpacity
-              style={styles.resetBtn}
-              onPress={() => {
-                setSearch('');
-                setCategory('all');
-              }}
-            >
-              <Text style={styles.resetBtnText}>Đặt lại bộ lọc</Text>
-            </TouchableOpacity>
-          </View>
+          category === 'saved' ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="bookmark-outline" size={48} color={COLORS.textTertiary} />
+              <Text style={styles.emptyTitle}>Chưa có bài viết nào được lưu</Text>
+              <Text style={styles.emptySub}>
+                Hãy nhấn biểu tượng bookmark ở bài viết bạn yêu thích để xem lại sau
+              </Text>
+              <TouchableOpacity
+                style={styles.resetBtn}
+                onPress={() => setCategory('all')}
+              >
+                <Text style={styles.resetBtnText}>Khám phá bài viết</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.emptyCard}>
+              <Ionicons name="search-outline" size={48} color={COLORS.textTertiary} />
+              <Text style={styles.emptyTitle}>Không tìm thấy bài viết</Text>
+              <Text style={styles.emptySub}>Thử tìm từ khóa khác hoặc chuyển sang danh mục "Tất cả"</Text>
+              <TouchableOpacity
+                style={styles.resetBtn}
+                onPress={() => {
+                  setSearch('');
+                  setCategory('all');
+                }}
+              >
+                <Text style={styles.resetBtnText}>Đặt lại bộ lọc</Text>
+              </TouchableOpacity>
+            </View>
+          )
         ) : (
           filteredArticles.map((art) => {
-            const isLiked = !!likedArticles[art.id];
+            const isLiked = likedIds.has(art.id);
+            const isSaved = savedIds.has(art.id);
             const catColor = getCategoryColor(art.category);
             return (
               <TouchableOpacity
@@ -324,7 +361,20 @@ export default function ExploreScreen() {
                     <TouchableOpacity
                       onPress={(e) => {
                         e.stopPropagation();
-                        handleToggleLike(art.id);
+                        toggleSave(art.id);
+                      }}
+                      style={styles.actionIconBtn}
+                    >
+                      <Ionicons
+                        name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                        size={18}
+                        color={isSaved ? COLORS.primary : COLORS.textTertiary}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        toggleLike(art.id);
                       }}
                       style={styles.heartBtn}
                     >
@@ -369,7 +419,10 @@ export default function ExploreScreen() {
                 <View style={styles.authorFooter}>
                   <Ionicons name="medical" size={13} color={COLORS.primary} style={{ marginRight: 6 }} />
                   <Text style={styles.authorName} numberOfLines={1}>
-                    {art.author} <Text style={styles.authorSub}>• {art.author_role.split('-')[0].trim()}</Text>
+                    {art.author}
+                    {art.author_role ? (
+                      <Text style={styles.authorSub}> • {art.author_role.split('-')[0].trim()}</Text>
+                    ) : null}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -386,6 +439,7 @@ export default function ExploreScreen() {
 
 function getCategoryColor(cat: string): string {
   const colors: Record<string, string> = {
+    saved: COLORS.primary,
     nutrition: '#D97706',
     sports: '#10B981',
     running: '#0284C7',
@@ -399,6 +453,7 @@ function getCategoryColor(cat: string): string {
 
 function getCategoryLabel(cat: string): string {
   const labels: Record<string, string> = {
+    saved: 'Đã lưu',
     nutrition: 'Dinh dưỡng',
     sports: 'Thể thao',
     running: 'Chạy bộ',
@@ -423,6 +478,24 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
   subtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2, fontFamily: FONT_FAMILY.base as string },
   avatarBtn: { padding: 4 },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 14,
+    gap: 8,
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#92400E',
+    fontFamily: FONT_FAMILY.medium as string,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -533,8 +606,9 @@ const styles = StyleSheet.create({
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   catBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   catBadgeText: { fontSize: 11, fontWeight: '700', fontFamily: FONT_FAMILY.bold as string },
-  cardHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cardHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   readMinutes: { fontSize: 11, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
+  actionIconBtn: { paddingVertical: 2, paddingHorizontal: 2 },
   heartBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
   heartCount: { fontSize: 11, fontWeight: '600', color: COLORS.textTertiary, fontFamily: FONT_FAMILY.semiBold as string },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.textPrimary, lineHeight: 22, marginBottom: 6, fontFamily: FONT_FAMILY.bold as string },
