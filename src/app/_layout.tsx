@@ -67,7 +67,16 @@ function LayoutContent() {
         <Stack.Screen name="dashboard/water" options={{ title: 'Uống nước' }} />
         <Stack.Screen name="health-data" options={{ title: 'Health Data' }} />
         <Stack.Screen name="explore" options={{ title: 'Explore' }} />
-        <Stack.Screen name="explore/[slug]" options={{ title: 'Bài viết' }} />
+        <Stack.Screen
+  name="explore/[slug]"
+  options={{
+    title: 'Bài viết',
+    // Cho phép thoát bằng gesture (swipe từ trái sang phải) ngay cả khi
+    // nút back custom không nhận được touch (phòng trường hợp overlay che phủ).
+    gestureEnabled: true,
+    gestureDirection: 'horizontal',
+  }}
+/>
         <Stack.Screen name="share" options={{ title: 'Sharing' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
         <Stack.Screen name="settings/goals" options={{ title: 'Goals' }} />

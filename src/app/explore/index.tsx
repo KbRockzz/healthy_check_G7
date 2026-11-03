@@ -13,19 +13,23 @@ import { COLORS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useExplore } from '@/lib/hooks/use-explore';
 import BottomTabBar from '@/components/bottom-tab-bar';
+import type { ContentCategory } from '@/lib/supabase';
+import {
+  CATEGORY_ICONS,
+  CATEGORY_LABELS,
+  CATEGORIES,
+  EXPLORE_STATS,
+  getCategoryColor,
+  getCategoryLabel,
+} from '@/lib/explore-constants';
 
-type Category = 'all' | 'saved' | 'nutrition' | 'sleep' | 'running' | 'womens_health' | 'sports' | 'mental_health';
+type Category = 'all' | 'saved' | ContentCategory;
 type SortOption = 'newest' | 'views' | 'upvotes';
 
 const CATEGORY_TABS: { label: string; value: Category; icon: string }[] = [
   { label: 'Tất cả', value: 'all', icon: 'grid-outline' },
   { label: 'Đã lưu', value: 'saved', icon: 'bookmark-outline' },
-  { label: 'Dinh dưỡng', value: 'nutrition', icon: 'restaurant-outline' },
-  { label: 'Giấc ngủ', value: 'sleep', icon: 'moon-outline' },
-  { label: 'Chạy bộ', value: 'running', icon: 'walk-outline' },
-  { label: 'Sức khỏe nữ', value: 'womens_health', icon: 'rose-outline' },
-  { label: 'Thể thao', value: 'sports', icon: 'barbell-outline' },
-  { label: 'Tâm lý', value: 'mental_health', icon: 'leaf-outline' },
+  ...CATEGORIES.map(cat => ({ label: CATEGORY_LABELS[cat], value: cat, icon: CATEGORY_ICONS[cat] })),
 ];
 
 export default function ExploreScreen() {
@@ -52,7 +56,7 @@ export default function ExploreScreen() {
     if (!session) {
       router.replace('/auth/sign-in');
     }
-  }, [session, authLoading]);
+  }, [session, authLoading, router]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -153,12 +157,14 @@ export default function ExploreScreen() {
         {/* Quick Stats Pill */}
         <View style={styles.statsRow}>
           <View style={styles.statPill}>
-            <Ionicons name="book-outline" size={16} color={COLORS.primary} />
+            <Ionicons name={EXPLORE_STATS[0].icon} size={16} color={EXPLORE_STATS[0].color} />
             <Text style={styles.statPillText}>{articles.length} bài viết chuyên sâu</Text>
           </View>
           <View style={styles.statPill}>
-            <Ionicons name="shield-checkmark-outline" size={16} color="#10B981" />
-            <Text style={[styles.statPillText, { color: '#047857' }]}>100% kiểm duyệt y khoa</Text>
+            <Ionicons name={EXPLORE_STATS[1].icon} size={16} color={EXPLORE_STATS[1].color} />
+            <Text style={[styles.statPillText, { color: EXPLORE_STATS[1].textColor }]}>
+              {EXPLORE_STATS[1].text}
+            </Text>
           </View>
         </View>
 
@@ -324,7 +330,7 @@ export default function ExploreScreen() {
             <View style={styles.emptyCard}>
               <Ionicons name="search-outline" size={48} color={COLORS.textTertiary} />
               <Text style={styles.emptyTitle}>Không tìm thấy bài viết</Text>
-              <Text style={styles.emptySub}>Thử tìm từ khóa khác hoặc chuyển sang danh mục "Tất cả"</Text>
+              <Text style={styles.emptySub}>Thử tìm từ khóa khác hoặc chuyển sang danh mục &#34;Tất cả&#34;</Text>
               <TouchableOpacity
                 style={styles.resetBtn}
                 onPress={() => {
@@ -435,34 +441,6 @@ export default function ExploreScreen() {
       <BottomTabBar currentRoute="/explore" onTabPress={(route) => router.push(route as any)} />
     </View>
   );
-}
-
-function getCategoryColor(cat: string): string {
-  const colors: Record<string, string> = {
-    saved: COLORS.primary,
-    nutrition: '#D97706',
-    sports: '#10B981',
-    running: '#0284C7',
-    sleep: '#8B5CF6',
-    mental_health: '#3B82F6',
-    womens_health: '#DB2777',
-    lifestyle: '#059669',
-  };
-  return colors[cat] || '#0284C7';
-}
-
-function getCategoryLabel(cat: string): string {
-  const labels: Record<string, string> = {
-    saved: 'Đã lưu',
-    nutrition: 'Dinh dưỡng',
-    sports: 'Thể thao',
-    running: 'Chạy bộ',
-    sleep: 'Giấc ngủ',
-    mental_health: 'Tâm lý',
-    womens_health: 'Sức khỏe nữ',
-    lifestyle: 'Lối sống',
-  };
-  return labels[cat] || cat;
 }
 
 const styles = StyleSheet.create({

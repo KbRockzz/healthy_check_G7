@@ -19,10 +19,9 @@ import {
   fetchMyBookmarkIds,
   setVote,
   setBookmark,
-  registerView,
   isServerId,
 } from '@/lib/explore-api';
-import { DetailedArticle } from '@/data/health-articles';
+import { HEALTH_ARTICLES, DetailedArticle } from '@/data/health-articles';
 
 export interface UseExploreReturn {
   articles: DetailedArticle[];
@@ -39,32 +38,41 @@ export function useExplore(): UseExploreReturn {
   const { session } = useAuth();
   const userId = session?.user?.id as string | undefined;
 
-  const [articles, setArticles] = useState<DetailedArticle[]>([]);
+  // Khởi tạo bằng bài local → màn hình luôn có data để hiển thị ngay,
+// không phụ thuộc vào request server (tránh treo khi mạng chậm/lỗi).
+const [articles, setArticles] = useState<DetailedArticle[]>(HEALTH_ARTICLES);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
 
   const load = useCallback(async () => {
+    console.log('[useExplore] load() started, userId =', userId);
     try {
       const [articlesRes, liked, saved] = await Promise.all([
         fetchArticles(),
         userId ? fetchMyVotedIds(userId) : Promise.resolve([]),
         userId ? fetchMyBookmarkIds(userId) : Promise.resolve([]),
       ]);
+      console.log('[useExplore] load() completed, articles.length =', articlesRes.articles.length, 'fromServer =', articlesRes.fromServer);
       setArticles(articlesRes.articles);
       setLikedIds(new Set(liked));
       setSavedIds(new Set(saved));
       setOffline(!articlesRes.fromServer);
-    } catch {
+    } catch (err) {
+      console.warn('[useExplore] load() error:', err);
       setOffline(true);
     } finally {
+      console.log('[useExplore] load() finally, setting loading = false');
       setLoading(false);
     }
   }, [userId]);
 
-  // load() đã gom fetchMyVotedIds / fetchMyBookmarkIds (module-level, stable).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // load() là async → các setState() xảy ra sau await (trong promise
+  // callback), không phải synchronous trong effect body. Đây là pattern
+  // async-data-init chuẩn của React; rule set-state-in-effect là false
+  // positive với hàm async. Ví dụ: https://react.dev/reference/react/useEffect
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   useFocusEffect(

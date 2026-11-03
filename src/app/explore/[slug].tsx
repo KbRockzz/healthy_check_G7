@@ -17,6 +17,12 @@ import { COLORS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useExplore } from '@/lib/hooks/use-explore';
 import { registerView } from '@/lib/explore-api';
 import { ArticleBody } from '@/components/article-body';
+import {
+  SHARE_DOMAIN,
+  VERIFIED_STAMP,
+  getCategoryColor,
+  getCategoryLabel,
+} from '@/lib/explore-constants';
 
 export default function ArticleScreen() {
   const router = useRouter();
@@ -32,7 +38,9 @@ export default function ArticleScreen() {
 
   // Find article from repository state
   const article = useMemo(() => {
-    return articles.find((a) => a.slug === slug);
+    const found = articles.find((a) => a.slug === slug);
+    console.log('[ArticleScreen] useMemo find, slug =', slug, 'articles.length =', articles.length, 'found =', found?.id, 'found.slug =', found?.slug);
+    return found;
   }, [articles, slug]);
 
   const [fontSize, setFontSize] = useState<number>(16);
@@ -65,7 +73,7 @@ export default function ArticleScreen() {
     try {
       await Share.share({
         message: `Đọc bài viết y khoa hữu ích: "${article.title}" trên Healthy Check!`,
-        url: `https://healthycheck.io/explore/${article.slug}`,
+        url: `${SHARE_DOMAIN}/explore/${article.slug}`,
       });
     } catch {
       Alert.alert('Chia sẻ', `Đã sao chép liên kết bài viết "${article.title}"`);
@@ -85,6 +93,7 @@ export default function ArticleScreen() {
   }, [article, articles]);
 
   if (!article) {
+    console.log('[ArticleScreen] !article branch, slug =', slug, 'articles.length =', articles.length, 'loading =', loading);
     return (
       <View style={styles.container}>
         <View style={styles.appBar}>
@@ -177,7 +186,7 @@ export default function ArticleScreen() {
             {article.author_role ? (
               <Text style={styles.authorRole}>{article.author_role}</Text>
             ) : null}
-            <Text style={styles.verifiedStamp}>Đã kiểm định y khoa bởi Hội đồng Bác sĩ G7</Text>
+            <Text style={styles.verifiedStamp}>{VERIFIED_STAMP}</Text>
           </View>
         </View>
 
@@ -317,34 +326,6 @@ export default function ArticleScreen() {
       </ScrollView>
     </View>
   );
-}
-
-function getCategoryColor(cat: string): string {
-  const colors: Record<string, string> = {
-    saved: COLORS.primary,
-    nutrition: '#D97706',
-    sports: '#10B981',
-    running: '#0284C7',
-    sleep: '#8B5CF6',
-    mental_health: '#3B82F6',
-    womens_health: '#DB2777',
-    lifestyle: '#059669',
-  };
-  return colors[cat] || '#0284C7';
-}
-
-function getCategoryLabel(cat: string): string {
-  const labels: Record<string, string> = {
-    saved: 'Đã lưu',
-    nutrition: 'Dinh dưỡng',
-    sports: 'Thể thao',
-    running: 'Chạy bộ',
-    sleep: 'Giấc ngủ',
-    mental_health: 'Tâm lý',
-    womens_health: 'Sức khỏe nữ',
-    lifestyle: 'Lối sống',
-  };
-  return labels[cat] || cat;
 }
 
 const styles = StyleSheet.create({
