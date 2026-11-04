@@ -25,8 +25,8 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { SYSTEM_PROMPT } from './prompt.ts';
 import { BLOCKED_REPLY, EMERGENCY_REPLY, SELF_HARM_REPLY, checkEmergency } from './safety.ts';
 import { buildTools } from './tools.ts';
-import { createGeminiProvider } from './llm/gemini.ts';
-import { LlmError, type LlmMessage, type LlmPart, type ToolDef } from './llm/provider.ts';
+import { createGeminiProvider } from './gemini.ts';
+import { LlmError, type LlmMessage, type LlmPart, type ToolDef } from './provider.ts';
 
 // ---------------------------------------------------------------------------
 // Env

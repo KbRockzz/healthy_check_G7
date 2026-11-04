@@ -1,5 +1,5 @@
 /**
- * Adapter Gemini REST (plan §5.7) — implement LlmProvider (llm/provider.ts).
+ * Adapter Gemini REST (plan §5.7) — implement LlmProvider (provider.ts).
  *
  * QUYẾT ĐỊNH BỀ MẶT API (§5.7 mục chưa chốt #1):
  *   Dùng bề mặt `generateContent`/`streamGenerateContent` với `functionDeclarations`

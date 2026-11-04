@@ -147,7 +147,6 @@ export default function ChatScreen() {
         ref={listRef}
         style={styles.flex}
         data={chat.messages}
-        inverted
         keyExtractor={(m) => m.id}
         renderItem={({ item }) => <MessageBubble message={item} />}
         contentContainerStyle={
@@ -164,7 +163,11 @@ export default function ChatScreen() {
             />
           )
         }
-        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={() => {
+          if (chat.messages.length > 0) {
+            listRef.current?.scrollToEnd({ animated: true });
+          }
+        }}
       />
 
       <ChatInput
@@ -400,6 +403,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 16,
+    justifyContent: 'center',
   },
   welcomeScroll: {},
 

@@ -13,7 +13,7 @@
 
 // Deno/Edge Function: dùng npm: specifier (Supabase docs khuyến nghị cho EF).
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
-import type { ToolDef } from './llm/provider.ts';
+import type { ToolDef } from './provider.ts';
 
 const MAX_TOOL_RESULT = 6000;
 

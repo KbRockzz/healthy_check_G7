@@ -194,8 +194,8 @@ supabase/functions/health-coach/
   safety.ts             # regex khẩn cấp + câu trả lời cố định
   prompt.ts             # system prompt tiếng Việt
   tools.ts              # định nghĩa tool + hàm thực thi (dùng client A)
-  llm/provider.ts       # interface LlmProvider
-  llm/gemini.ts         # adapter Gemini (dịch tool §5.4, stream, ánh xạ lỗi/usage)
+  provider.ts           # interface LlmProvider
+  gemini.ts             # adapter Gemini (dịch tool §5.4, stream, ánh xạ lỗi/usage)
 supabase/config.toml    # (nếu cần) verify_jwt = true cho function này
 ```
 
@@ -333,7 +333,7 @@ Dùng `COLORS`, `FONT_FAMILY`, `BORDER_RADIUS`, `SHADOWS` từ `src/theme`; bong
 - **Xong khi:** gửi tin nhắn thấy chữ hiện dần (hoặc fallback không stream) trên ít nhất 1 thiết bị thật hoặc emulator; `npx expo lint` và `npx tsc --noEmit` sạch.
 
 ### Phase 4 — LLM thật và an toàn
-- [ ] `llm/provider.ts` + adapter `llm/gemini.ts`; `prompt.ts`; `safety.ts`. Xử lý: 429, phản hồi bị chặn bởi safety của Gemini, timeout, ngắt stream giữa chừng.
+- [ ] `provider.ts` + adapter `gemini.ts`; `prompt.ts`; `safety.ts`. Xử lý: 429, phản hồi bị chặn bởi safety của Gemini, timeout, ngắt stream giữa chừng.
 - [ ] Đặt secret; deploy function.
 - [ ] Chưa có tool: chatbot trả lời được câu hỏi chung, từ chối chủ đề ngoài phạm vi.
 - **Xong khi:** bộ câu hỏi an toàn §8.3 đạt; câu khẩn cấp không đi qua LLM.

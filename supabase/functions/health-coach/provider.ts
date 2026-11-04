@@ -1,6 +1,6 @@
 /**
  * Giao diện chung cho nhà cung cấp LLM (plan §5.1, §5.7).
- * Hiện tại chỉ có một adapter: Gemini (llm/gemini.ts). Đổi provider = sửa 1 file.
+ * Hiện tại chỉ có một adapter: Gemini (gemini.ts). Đổi provider = sửa 1 file.
  *
  * Thiết kế:
  *  - `messages`: mảng { role, parts } — parts giữ nguyên raw objects từ model
