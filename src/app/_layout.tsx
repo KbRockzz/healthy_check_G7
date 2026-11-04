@@ -4,12 +4,17 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, I18nManager } from 'react-native';
 import { COLORS } from '@/theme';
 import { AuthProvider, useAuth } from '@/lib/hooks/use-auth';
 import { useSplashScreen } from '@/lib/hooks/use-splash-screen';
 import { useDeepLinking } from '@/lib/hooks/use-deep-linking';
 import { ChatFAB } from '@/components/chat/chat-fab';
+
+// §Q8: App là tiếng Việt → ép toàn bộ giao diện sang LTR. Một số thiết bị có locale
+// RTL (ví dụ fa/ar) sẽ tự động flip layout; force LTR ở đây để text không bị mirror.
+I18nManager.forceRTL(false);
+I18nManager.allowRTL(false);
 
 // Content component - uses hooks inside AuthProvider
 function LayoutContent() {

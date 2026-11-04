@@ -1,10 +1,12 @@
 /**
- * Chip gợi ý câu hỏi nhanh (§6.4): tập tĩnh + tập động từ DashboardSummary.
- * Tối đa 4 chip, ẩn khi cuộc trò chuyện đã có tin nhắn.
+ * Chip gợi ý câu hỏi nhanh (§6.4): tập statically + tập dynamically từ DashboardSummary.
+ * Tối đa 4 chip, ấn khi cuộc trò chuyện đã có tin nhắn.
+ * Render dạng lưới 2 cột — gọn gàng, không còn là những viên nang rỗng khổng lồ.
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONT_SIZES, BORDER_RADIUS, FONT_FAMILY } from '../../theme';
 
 interface Props {
@@ -47,11 +49,7 @@ export function SuggestedChips({ hidden, onSelect, dynamicPrompts }: Props) {
   const chips = [...(dynamicPrompts ?? []), ...STATIC_PROMPTS].slice(0, 4);
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-    >
+    <View style={styles.grid}>
       {chips.map((c) => (
         <TouchableOpacity
           key={c}
@@ -59,33 +57,53 @@ export function SuggestedChips({ hidden, onSelect, dynamicPrompts }: Props) {
           onPress={() => onSelect(c)}
           activeOpacity={0.75}
         >
-          <Text style={styles.chipText} numberOfLines={2}>
-            {c}
-          </Text>
+          <View style={styles.chipInner}>
+            <Ionicons name="sparkles" size={11} color={COLORS.primary} style={styles.chipIcon} />
+            <Text style={styles.chipText} numberOfLines={2}>
+              {c}
+            </Text>
+          </View>
         </TouchableOpacity>
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
+// Subtle lift without importing SHADOWS (avoids adding elevation on web).
+const CHIP_SHADOW = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.04,
+  shadowRadius: 4,
+  elevation: 1,
+};
+
 const styles = StyleSheet.create({
-  row: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   chip: {
-    backgroundColor: COLORS.bg,
+    width: '46%',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    maxWidth: 240,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: 14,
+    ...CHIP_SHADOW,
   },
+  chipInner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  chipIcon: { marginTop: 2 },
   chipText: {
+    flex: 1,
     fontSize: FONT_SIZES.sm,
     fontFamily: FONT_FAMILY.medium,
-    color: COLORS.primary,
+    color: COLORS.textPrimary,
+    lineHeight: 20,
   },
 });

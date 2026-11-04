@@ -17,6 +17,7 @@ import {
   Platform,
   Alert,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -28,7 +29,7 @@ import { useChatHistory } from '@/lib/hooks/use-chat-history';
 import { MessageBubble } from '@/components/chat/message-bubble';
 import { ChatInput } from '@/components/chat/chat-input';
 import { TypingIndicator } from '@/components/chat/typing-indicator';
-import { SuggestedChips, buildDynamicPrompts } from '@/components/chat/suggested-chips';
+import { buildDynamicPrompts } from '@/components/chat/suggested-chips';
 import { ConsentSheet, hasConsent, setConsent } from '@/components/chat/consent-sheet';
 
 export default function ChatScreen() {
@@ -105,8 +106,6 @@ export default function ChatScreen() {
     void id;
   };
 
-  const showChips = chat.messages.length === 0 && !chat.isStreaming;
-
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -123,7 +122,10 @@ export default function ChatScreen() {
           <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Health Coach</Text>
+          <View style={styles.headerTitleRow}>
+            <Ionicons name="chatbubble-ellipses" size={20} color={COLORS.primary} />
+            <Text style={styles.headerTitle}>Health Coach</Text>
+          </View>
           <Text style={styles.headerSub}>Trợ lý sức khỏe của bạn</Text>
         </View>
         <TouchableOpacity
@@ -148,18 +150,22 @@ export default function ChatScreen() {
         inverted
         keyExtractor={(m) => m.id}
         renderItem={({ item }) => <MessageBubble message={item} />}
-        contentContainerStyle={[styles.listContent, { paddingBottom: 12 }]}
+        contentContainerStyle={
+          chat.messages.length === 0
+            ? styles.listEmptyContent
+            : [styles.listContent, { paddingBottom: 12 }]
+        }
         ListFooterComponent={chat.isStreaming ? () => <TypingIndicator label={chat.currentTool} /> : undefined}
+        ListEmptyComponent={() =>
+          chat.isStreaming ? <></> : (
+            <WelcomeHero
+              onSuggestion={handleSend}
+              dynamicPrompts={dynamicPrompts}
+            />
+          )
+        }
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
       />
-
-      {showChips && (
-        <SuggestedChips
-          hidden={false}
-          onSelect={handleSend}
-          dynamicPrompts={dynamicPrompts}
-        />
-      )}
 
       <ChatInput
         onSend={handleSend}
@@ -248,6 +254,104 @@ export default function ChatScreen() {
   );
 }
 
+/**
+ * Màn hình welcome khi chưa có tin nhắn nào: hero + các card gợi ý nhanh.
+ * Thay cho khoảng trắng vô nghĩa — giúp người dùng biết bắt đầu từ đâu.
+ */
+function WelcomeHero({
+  onSuggestion,
+  dynamicPrompts,
+}: {
+  onSuggestion: (text: string) => void;
+  dynamicPrompts?: string[];
+}) {
+  const chips = [...(dynamicPrompts ?? []), ...DEFAULT_WELCOME_PROMPTS].slice(0, 4);
+  return (
+    <ScrollView
+      contentContainerStyle={styles.welcomeScroll}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* Hero */}
+      <View style={styles.welcomeHero}>
+        <View style={styles.welcomeIconWrap}>
+          <Ionicons name="chatbubble-ellipses" size={32} color={COLORS.primary} />
+        </View>
+        <Text style={styles.welcomeTitle}>Chào bạn, mình là Health Coach</Text>
+        <Text style={styles.welcomeSub}>
+          Mình có thể giúp bạn phân tích dữ liệu sức khỏe, đưa ra lời khuyên cá nhân hóa
+          và đồng hành cùng mục tiêu mỗi ngày. Hỏi gì cũng được.
+        </Text>
+        <View style={styles.welcomeChips}>
+          {chips.map((c) => (
+            <TouchableOpacity
+              key={c}
+              style={styles.welcomeChip}
+              onPress={() => onSuggestion(c)}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.welcomeChipText} numberOfLines={2}>
+                {c}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Gợi ý khác */}
+      <Text style={styles.welcomeSectionTitle}>Các câu hỏi thường gặp</Text>
+      <View style={styles.welcomeSection}>
+        <TouchableOpacity
+          style={styles.welcomeSectionItem}
+          onPress={() => onSuggestion('Tóm tắt tình trạng sức khỏe của tôi hôm nay')}
+        >
+          <View style={styles.welcomeSectionIcon}>
+            <Ionicons name="bar-chart" size={16} color={COLORS.primary} />
+          </View>
+          <Text style={styles.welcomeSectionText}>Tóm tắt sức khỏe hôm nay</Text>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.welcomeSectionItem}
+          onPress={() => onSuggestion('Lời khuyên để cải thiện giấc ngủ')}
+        >
+          <View style={styles.welcomeSectionIcon}>
+            <Ionicons name="moon" size={16} color={COLORS.primary} />
+          </View>
+          <Text style={styles.welcomeSectionText}>Cải thiện giấc ngủ</Text>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.welcomeSectionItem}
+          onPress={() => onSuggestion('Lời khuyên dinh dưỡng cho người làm văn phòng')}
+        >
+          <View style={styles.welcomeSectionIcon}>
+            <Ionicons name="restaurant" size={16} color={COLORS.primary} />
+          </View>
+          <Text style={styles.welcomeSectionText}>Dinh dưỡng văn phòng</Text>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.welcomeSectionItem, styles.welcomeSectionItemLast]}
+          onPress={() => onSuggestion('Tại sao tôi nên đi bộ mỗi ngày?')}
+        >
+          <View style={styles.welcomeSectionIcon}>
+            <Ionicons name="walk" size={16} color={COLORS.primary} />
+          </View>
+          <Text style={styles.welcomeSectionText}>Lợi ích đi bộ hàng ngày</Text>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} />
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+
+const DEFAULT_WELCOME_PROMPTS = [
+  'Tóm tắt sức khỏe của tôi hôm nay',
+  'Lời khuyên để ngủ đủ giấc',
+  'Tôi nên ăn gì để đủ calo?',
+];
+
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.bg },
   header: {
@@ -261,6 +365,11 @@ const styles = StyleSheet.create({
   },
   headerBtn: { padding: 8 },
   headerTitleWrap: { flex: 1, alignItems: 'center' },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   headerTitle: {
     fontSize: FONT_SIZES.lg,
     fontFamily: FONT_FAMILY.bold,
@@ -286,6 +395,111 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: { paddingHorizontal: 4, paddingTop: 8 },
+  listEmptyContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  welcomeScroll: {},
+
+  // Hero
+  welcomeHero: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: 24,
+    alignItems: 'center',
+    ...SHADOWS.sm,
+  },
+  welcomeIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  welcomeTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.textPrimary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  welcomeSub: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: FONT_FAMILY.base,
+    color: COLORS.textSecondary,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  welcomeChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+  },
+  welcomeChip: {
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    maxWidth: '45%',
+    ...SHADOWS.sm,
+  },
+  welcomeChipText: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONT_FAMILY.medium,
+    color: COLORS.primary,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+
+  // Gợi ý khác
+  welcomeSectionTitle: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.textPrimary,
+    marginTop: 28,
+    marginBottom: 12,
+  },
+  welcomeSection: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  welcomeSectionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  welcomeSectionItemLast: { borderBottomWidth: 0 },
+  welcomeSectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  welcomeSectionText: {
+    flex: 1,
+    fontSize: FONT_SIZES.base,
+    fontFamily: FONT_FAMILY.medium,
+    color: COLORS.textPrimary,
+  },
   disclaimer: {
     textAlign: 'center',
     fontSize: FONT_SIZES.xs,
