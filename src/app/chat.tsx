@@ -35,7 +35,7 @@ import { ConsentSheet, hasConsent, setConsent } from '@/components/chat/consent-
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { session, profile } = useAuth();
-  const userId = (session?.user?.id as string | undefined) ?? 'demo-owner-id';
+  const userId = session?.user?.id as string | undefined;
   const params = useLocalSearchParams<{ prefill?: string }>();
 
   const chat = useChat();

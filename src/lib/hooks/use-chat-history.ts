@@ -23,6 +23,11 @@ export function useChatHistory(): UseChatHistoryReturn {
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setConversations([]);
+        return;
+      }
       const { data, error } = await supabase
         .from('chat_conversations')
         .select('id, user_id, title, created_at, updated_at')
@@ -32,8 +37,8 @@ export function useChatHistory(): UseChatHistoryReturn {
         return;
       }
       setConversations(data ?? []);
-    } catch (e) {
-      console.error('use-chat-history: load failed', e);
+    } catch {
+      setConversations([]);
     } finally {
       setLoading(false);
     }
@@ -41,14 +46,14 @@ export function useChatHistory(): UseChatHistoryReturn {
 
   const openConversation = useCallback(
     async (id: string): Promise<ChatConversation | null> => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return null;
       const { data, error } = await supabase
         .from('chat_conversations')
         .select('id, user_id, title, created_at, updated_at')
         .eq('id', id)
         .maybeSingle();
-      if (error) {
-        return null;
-      }
+      if (error) return null;
       return data;
     },
     []
