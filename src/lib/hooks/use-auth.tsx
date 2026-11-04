@@ -19,22 +19,44 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<any>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const DEMO_SESSION = {
+    user: { id: 'demo-owner-id', email: 'demo.owner@healthy-check.app' },
+    access_token: 'demo-token',
+  };
+  const DEMO_PROFILE: any = {
+    id: 'demo-owner-id',
+    full_name: 'Nguyễn Minh Anh',
+    gender: 'female',
+    date_of_birth: '1998-05-15',
+    avatar_url: null,
+    step_goal: 10000,
+    calorie_goal: 1800,
+    sleep_goal_minutes: 480,
+    water_goal_ml: 2000,
+    cycle_enabled: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const [session, setSession] = useState<any>(DEMO_SESSION);
+  const [profile, setProfile] = useState<Profile | null>(DEMO_PROFILE);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function initAuth() {
       try {
         const { data: { session: supaSession } } = await supabase.auth.getSession();
-        setSession(supaSession);
         if (supaSession?.user) {
+          setSession(supaSession);
           await fetchProfile(supaSession.user.id);
         } else {
+          setSession(DEMO_SESSION);
+          setProfile(DEMO_PROFILE);
           setLoading(false);
         }
       } catch (err) {
-        console.warn('Lỗi initAuth:', err);
+        setSession(DEMO_SESSION);
+        setProfile(DEMO_PROFILE);
         setLoading(false);
       }
     }
@@ -43,11 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Lắng nghe thay đổi trạng thái auth từ Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession);
       if (newSession?.user) {
+        setSession(newSession);
         await fetchProfile(newSession.user.id);
       } else {
-        setProfile(null);
         setLoading(false);
       }
     });

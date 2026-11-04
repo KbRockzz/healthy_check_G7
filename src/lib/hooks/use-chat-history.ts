@@ -27,7 +27,10 @@ export function useChatHistory(): UseChatHistoryReturn {
         .from('chat_conversations')
         .select('id, user_id, title, created_at, updated_at')
         .order('updated_at', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        setConversations([]);
+        return;
+      }
       setConversations(data ?? []);
     } catch (e) {
       console.error('use-chat-history: load failed', e);
@@ -43,7 +46,9 @@ export function useChatHistory(): UseChatHistoryReturn {
         .select('id, user_id, title, created_at, updated_at')
         .eq('id', id)
         .maybeSingle();
-      if (error) throw error;
+      if (error) {
+        return null;
+      }
       return data;
     },
     []

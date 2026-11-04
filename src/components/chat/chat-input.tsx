@@ -48,6 +48,13 @@ export function ChatInput({ onSend, onStop, streaming, disabled, prefill }: Prop
           placeholderTextColor={COLORS.textTertiary}
           multiline
           maxLength={MAX_LEN}
+          onKeyPress={(e: any) => {
+            // Trên Web: nhấn Enter (không kèm Shift) để gửi tin nhắn ngay lập tức
+            if (Platform.OS === 'web' && e.nativeEvent?.key === 'Enter' && !e.nativeEvent?.shiftKey) {
+              e.preventDefault?.();
+              handleSend();
+            }
+          }}
           onSubmitEditing={handleSend}
           blurOnSubmit={false}
           editable={!disabled}
@@ -98,24 +105,20 @@ const styles = StyleSheet.create({
     minHeight: 44,
     maxHeight: 120,
     justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.xl,
     borderWidth: 1,
     borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   input: {
-    paddingVertical: 0,
-    paddingHorizontal: 0,
-    margin: 0,
     fontSize: FONT_SIZES.base,
     fontFamily: FONT_FAMILY.base,
     color: COLORS.textPrimary,
-    lineHeight: 22,
-    minHeight: 22,
-    maxHeight: 100,
-    textAlignVertical: 'center',
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none', resize: 'none', height: 22 } as any) : {}),
+    lineHeight: 20,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   btn: {
     width: 44,
@@ -124,7 +127,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendBtn: { backgroundColor: COLORS.primary },
-  stopBtn: { backgroundColor: COLORS.danger },
-  sendDisabled: { backgroundColor: COLORS.surface },
+  sendBtn: {
+    backgroundColor: COLORS.primary,
+  },
+  sendDisabled: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  stopBtn: {
+    backgroundColor: COLORS.danger,
+  },
 });
