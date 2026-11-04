@@ -97,17 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, password: string) {
     try {
-      let { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error && (error.message?.includes('Database error') || email.startsWith('demo.'))) {
-        const fallback = await supabase.auth.signInWithPassword({
-          email: 'testuser_g7@gmail.com',
-          password: 'password123',
-        });
-        if (!fallback.error && fallback.data.session) {
-          data = fallback.data;
-          error = null;
-        }
-      }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (!error && data.session) {
         setSession(data.session);
         if (data.user) {

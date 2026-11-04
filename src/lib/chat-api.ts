@@ -1,9 +1,62 @@
+/**
+ * Gọi Edge Function `health-coach` (SSE streaming) từ client.
+ *
+ * §6.2: dùng `expo/fetch` (có trong Expo Go, hỗ trợ stream). Fallback không stream
+ * nếu response.body không có (web/legacy) — hook `use-chat` che giấu sự khác biệt.
+ *
+ * §2 bảo mật: JWT từ session được gửi qua header Authorization (không lặp lại
+ * key). 401 → refresh session 1 lần rồi thử lại. 429/rate_limited → error event.
+ */
 
-/** Gọi trực tiếp Google Gemini API nếu user cung cấp EXPO_PUBLIC_GEMINI_API_KEY trong file .env */
+import { fetch as expoFetch } from 'expo/fetch';
+import { supabase, SUPABASE_URL, DashboardSummary } from './supabase';
+
+// Edge Function URL (§5.1). Dùng SUPABASE_URL export để không truy cập protected field.
+const EDGE_URL = `${SUPABASE_URL}/functions/v1/health-coach`;
+
+// §5.3 — các SSE event name
+export type ChatEvent =
+  | { type: 'meta'; conversation_id: string | null }
+  | { type: 'tool'; name: string; status: string }
+  | { type: 'delta'; text: string }
+  | { type: 'done' }
+  | { type: 'error'; code: string; message: string };
+
+export interface ChatRequest {
+  message: string;
+  conversation_id?: string | null;
+  locale?: string;
+}
+
+/** Lấy tên và dữ liệu sức khỏe thực tế của user đang đăng nhập từ Supabase */
+async function fetchRealUserContext(): Promise<{ fullName: string; summary: DashboardSummary | null }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    let fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'bạn';
+
+    if (user?.id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (profile?.full_name) {
+        fullName = profile.full_name;
+      }
+    }
+
+    const { data: summary } = await supabase.rpc('get_dashboard_summary');
+    return { fullName, summary: (summary as DashboardSummary) ?? null };
+  } catch {
+    return { fullName: 'bạn', summary: null };
+  }
+}
+
+/** Gọi trực tiếp Google Gemini API với dữ liệu thật từ Supabase nếu có EXPO_PUBLIC_GEMINI_API_KEY */
 async function* callDirectGemini(req: ChatRequest, signal: AbortSignal, apiKey: string): AsyncGenerator<ChatEvent, void, unknown> {
   yield { type: 'meta', conversation_id: req.conversation_id || 'conv-direct-gemini' };
 
-  // Kiểm tra khẩn cấp trước khi gọi LLM
   const lower = req.message.toLowerCase();
   const isEmergency = /đau ngực|khó thở|ngất xỉu|co giật|chảy máu|đột quỵ|ngộ độc|cấp cứu|115/.test(lower);
   if (isEmergency) {
@@ -15,17 +68,29 @@ async function* callDirectGemini(req: ChatRequest, signal: AbortSignal, apiKey: 
     return;
   }
 
-  yield { type: 'tool', name: 'gemini_health_coach', status: 'running' };
+  yield { type: 'tool', name: 'get_dashboard_summary', status: 'running' };
+  const { fullName, summary } = await fetchRealUserContext();
 
-  const systemPrompt = `Bạn là Health Coach AI của ứng dụng Healthy Check (nhóm 7).
+  const steps = summary?.steps?.count ?? 0;
+  const stepGoal = summary?.goals?.step_goal ?? 10000;
+  const sleepMin = summary?.sleep?.total_minutes ?? 0;
+  const sleepGoalMin = summary?.goals?.sleep_goal_minutes ?? 480;
+  const waterMl = summary?.water ?? 0;
+  const waterGoalMl = summary?.goals?.water_goal_ml ?? 2000;
+  const calories = summary?.nutrition?.calories ?? 0;
+  const calorieGoal = summary?.goals?.calorie_goal ?? 2000;
+  const score = summary?.health_score?.score ?? 0;
+
+  const systemPrompt = `Bạn là Health Coach AI của ứng dụng Healthy Check.
 Bạn tư vấn sức khỏe bằng tiếng Việt một cách khoa học, thân thiện, súc tích và có động viên.
-Dữ liệu sức khỏe hôm nay của người dùng Nguyễn Minh Anh:
-- Bước chân: 7,540 bước (mục tiêu 10,000 bước).
-- Giấc ngủ đêm qua: 7 giờ 15 phút (mục tiêu 8 giờ, giấc ngủ sâu 22%).
-- Nước uống: 1,650 ml (mục tiêu 2,000 ml).
-- Lượng calo nạp vào: 1,450 kcal (mục tiêu 1,800 kcal).
-- Điểm sức khỏe: 82/100 (Tốt).
-Hãy trả lời dựa trên ngữ cảnh này khi người dùng hỏi về sức khỏe của họ.`;
+Dữ liệu sức khỏe thực tế hôm nay của người dùng (${fullName}) từ Supabase:
+- Bước chân: ${steps} / ${stepGoal} bước
+- Giấc ngủ: ${Math.floor(sleepMin / 60)} giờ ${sleepMin % 60} phút (mục tiêu ${Math.floor(sleepGoalMin / 60)} giờ)
+- Nước uống: ${waterMl} / ${waterGoalMl} ml
+- Lượng calo nạp vào: ${calories} / ${calorieGoal} kcal
+- Điểm sức khỏe (Health Score): ${score}/100
+- Chu kỳ: ${summary?.cycle ? JSON.stringify(summary.cycle) : 'chưa có dữ liệu'}
+Hãy trả lời dựa sát trên dữ liệu thật này của người dùng.`;
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
@@ -34,22 +99,21 @@ Hãy trả lời dựa trên ngữ cảnh này khi người dùng hỏi về s�
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\nCâu hỏi của người dùng: ${req.message}` }] }
-        ]
+          { role: 'user', parts: [{ text: `${systemPrompt}\n\nCâu hỏi của người dùng: ${req.message}` }] },
+        ],
       }),
-      signal
+      signal,
     });
 
     if (!resp.ok) {
-      console.warn('Direct Gemini call failed with status:', resp.status, 'falling back to local coach');
-      yield* simulateLocalCoach(req, signal);
+      yield* simulateLocalCoach(req, signal, { fullName, summary });
       return;
     }
 
     const json = await resp.json();
     const replyText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     if (!replyText) {
-      yield* simulateLocalCoach(req, signal);
+      yield* simulateLocalCoach(req, signal, { fullName, summary });
       return;
     }
 
@@ -60,16 +124,18 @@ Hãy trả lời dựa trên ngữ cảnh này khi người dùng hỏi về s�
       await new Promise((r) => setTimeout(r, 40));
     }
     yield { type: 'done' };
-  } catch (err) {
-    console.warn('Direct Gemini error:', err);
-    yield* simulateLocalCoach(req, signal);
+  } catch {
+    yield* simulateLocalCoach(req, signal, { fullName, summary });
   }
 }
 
-
-/** Fallback mô phỏng Health Coach thông minh khi Edge Function chưa deploy lên Cloud (404/local test) */
-async function* simulateLocalCoach(req: ChatRequest, signal: AbortSignal): AsyncGenerator<ChatEvent, void, unknown> {
-  yield { type: 'meta', conversation_id: req.conversation_id || 'conv-local-demo' };
+/** Fallback trả lời dựa trên dữ liệu thật của user trong Supabase khi Edge Function chưa deploy (404) */
+async function* simulateLocalCoach(
+  req: ChatRequest,
+  signal: AbortSignal,
+  prefetched?: { fullName: string; summary: DashboardSummary | null }
+): AsyncGenerator<ChatEvent, void, unknown> {
+  yield { type: 'meta', conversation_id: req.conversation_id || 'conv-local' };
 
   const lower = req.message.toLowerCase();
   const isEmergency = /đau ngực|khó thở|ngất xỉu|co giật|chảy máu|đột quỵ|ngộ độc|cấp cứu|115/.test(lower);
@@ -93,25 +159,44 @@ async function* simulateLocalCoach(req: ChatRequest, signal: AbortSignal): Async
     return;
   }
 
-  // Tool event simulation (§5.3: tool event)
   yield { type: 'tool', name: 'get_dashboard_summary', status: 'running' };
-  await new Promise((r) => setTimeout(r, 600));
+  const { fullName, summary } = prefetched ?? (await fetchRealUserContext());
+
+  const steps = summary?.steps?.count ?? 0;
+  const stepGoal = summary?.goals?.step_goal ?? 10000;
+  const stepPct = stepGoal > 0 ? Math.round((steps / stepGoal) * 100) : 0;
+  const burned = summary?.steps?.calories_burned ?? 0;
+
+  const sleepMin = summary?.sleep?.total_minutes ?? 0;
+  const sleepGoalMin = summary?.goals?.sleep_goal_minutes ?? 480;
+  const sleepH = Math.floor(sleepMin / 60);
+  const sleepM = sleepMin % 60;
+
+  const waterMl = summary?.water ?? 0;
+  const waterGoalMl = summary?.goals?.water_goal_ml ?? 2000;
+
+  const calories = summary?.nutrition?.calories ?? 0;
+  const calorieGoal = summary?.goals?.calorie_goal ?? 2000;
+
+  const score = summary?.health_score?.score ?? 0;
 
   let reply = '';
   if (/bước|đi bộ|steps/i.test(lower)) {
-    reply = 'Chào Minh Anh! Hôm nay bạn đã đi được **7,540 bước**, đạt **75.4%** mục tiêu 10,000 bước. Bạn đã tiêu hao khoảng 325 kcal. Buổi tối bạn chỉ cần đi dạo nhẹ nhàng khoảng 20 phút là sẽ hoàn thành xuất sắc mục tiêu ngày hôm nay đấy! 👟🔥';
+    reply = `Chào **${fullName}**! Hôm nay bạn đã đi được **${steps.toLocaleString('vi-VN')} bước**, đạt **${stepPct}%** mục tiêu (${stepGoal.toLocaleString('vi-VN')} bước) và tiêu hao **${burned} kcal**. ${steps < stepGoal ? `Bạn còn thiếu ${(stepGoal - steps).toLocaleString('vi-VN')} bước nữa để hoàn thành mục tiêu hôm nay — hãy dành khoảng 15–20 phút đi bộ nhẹ nhàng nhé! 👟` : 'Chúc mừng bạn đã hoàn thành mục tiêu bước chân hôm nay! 🎉'}`;
   } else if (/ngủ|sleep/i.test(lower)) {
-    reply = 'Đêm qua bạn đã ngủ được **7 giờ 15 phút**, đạt **90.6%** so với mục tiêu 8 giờ. Trong đó giấc ngủ sâu (Deep Sleep) chiếm khoảng 22%, đây là tỷ lệ rất lý tưởng để phục hồi cơ bắp và não bộ. Đêm nay hãy tiếp tục duy trì thói quen đi ngủ trước 23h nhé! 🌙✨';
+    reply = sleepMin > 0
+      ? `Chào **${fullName}**! Thời gian ngủ ghi nhận của bạn là **${sleepH} giờ ${sleepM} phút** trên mục tiêu **${Math.floor(sleepGoalMin / 60)} giờ**. Hãy duy trì giờ đi ngủ đều đặn để cơ thể phục hồi tốt nhất nhé! 🌙`
+      : `Chào **${fullName}**! Hôm nay bạn chưa ghi nhận dữ liệu giấc ngủ (mục tiêu của bạn là **${Math.floor(sleepGoalMin / 60)} giờ/đêm**). Bạn có thể vào mục Giấc ngủ trên Dashboard để cập nhật nhé! 🌙`;
   } else if (/nước|water/i.test(lower)) {
-    reply = 'Hôm nay bạn đã uống được **1,650 ml** nước (đạt **82.5%** mục tiêu 2,000 ml). Thời tiết hôm nay khá hanh khô, bạn nên bổ sung thêm 1 ly nước ấm khoảng 350ml trước 20h để cơ thể được cấp ẩm đầy đủ nhé! 💧';
+    reply = `Chào **${fullName}**! Hôm nay bạn đã uống **${waterMl} ml** trên mục tiêu **${waterGoalMl} ml** nước (${waterGoalMl > 0 ? Math.round((waterMl / waterGoalMl) * 100) : 0}%). ${waterMl < waterGoalMl ? `Bạn hãy bổ sung thêm **${waterGoalMl - waterMl} ml** nước trong ngày để cơ thể đủ ẩm nhé! 💧` : 'Tuyệt vời, bạn đã uống đủ mục tiêu nước hôm nay! 💧'}`;
   } else if (/calo|ăn|dinh dưỡng|calories/i.test(lower)) {
-    reply = 'Hôm nay bạn đã ghi nhận nạp **1,450 kcal** trên hạn mức 1,800 kcal (còn lại 350 kcal). Phân bổ dinh dưỡng: Carbs 52%, Protein 23%, Chất béo 25%. Nếu cảm thấy đói nhẹ trước giờ ngủ, bạn có thể chọn một bữa phụ giàu protein như sữa chua không đường hoặc hạnh nhân! 🥗';
+    reply = `Chào **${fullName}**! Lượng calo nạp vào hôm nay của bạn là **${calories} kcal** / mục tiêu **${calorieGoal} kcal** (Protein: ${summary?.nutrition?.protein_g ?? 0}g, Carbs: ${summary?.nutrition?.carbs_g ?? 0}g, Fat: ${summary?.nutrition?.fat_g ?? 0}g). 🥗`;
   } else if (/chu kỳ|kinh nguyệt|cycle/i.test(lower)) {
-    reply = 'Theo dõi chu kỳ cho thấy hôm nay bạn đang ở **ngày thứ 12** (Giai đoạn Nang trứng - Follicular phase). Nồng độ Estrogen đang tăng dần, thể lực và tinh thần của bạn rất dồi dào — thời điểm vàng để tập luyện nâng cao thể lực hoặc thử thách mục tiêu mới! 🌸';
-  } else if (/điểm|sức khỏe|score|tổng quát/i.test(lower)) {
-    reply = 'Điểm sức khỏe hôm nay của bạn là **82/100 (Tốt)**. Các chỉ số bước chân và giấc ngủ được duy trì rất ổn định. Để cải thiện thêm điểm số, bạn chỉ cần hoàn thành nốt mục tiêu uống nước 2L hôm nay nhé! 🌟';
+    reply = summary?.cycle
+      ? `Chào **${fullName}**! Dữ liệu chu kỳ hiện tại của bạn: kỳ gần nhất bắt đầu ngày **${summary.cycle.last_period_start}**, độ dài chu kỳ **${summary.cycle.cycle_length} ngày**, còn khoảng **${summary.cycle.days_to_next} ngày** đến kỳ tiếp theo. 🌸`
+      : `Chào **${fullName}**! Hiện tại chưa có dữ liệu chu kỳ hoặc tính năng theo dõi chu kỳ chưa được bật trong hồ sơ của bạn. 🌸`;
   } else {
-    reply = 'Chào Minh Anh! Tôi là **Health Coach AI** của Healthy Check. Dựa trên dữ liệu hôm nay, sức khỏe của bạn đang ở trạng thái rất tốt (Điểm 82/100). Bạn có thể hỏi tôi chi tiết về số bước chân, giấc ngủ đêm qua, lượng nước đã uống hoặc tư vấn dinh dưỡng!';
+    reply = `Chào **${fullName}**! Tóm tắt dữ liệu sức khỏe hôm nay của bạn từ hệ thống:\n- **Điểm sức khỏe**: **${score}/100**\n- **Bước chân**: **${steps.toLocaleString('vi-VN')} / ${stepGoal.toLocaleString('vi-VN')} bước**\n- **Nước uống**: **${waterMl} / ${waterGoalMl} ml**\n- **Dinh dưỡng**: **${calories} / ${calorieGoal} kcal**\n- **Giấc ngủ**: **${sleepH}h${sleepM}p / ${Math.floor(sleepGoalMin / 60)}h**\nBạn muốn mình tư vấn chi tiết hơn về chỉ số nào?`;
   }
 
   const words = reply.split(' ');
@@ -119,40 +204,10 @@ async function* simulateLocalCoach(req: ChatRequest, signal: AbortSignal): Async
     if (signal.aborted) return;
     const chunk = words.slice(i, i + 3).join(' ') + ' ';
     yield { type: 'delta', text: chunk };
-    await new Promise((r) => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 50));
   }
 
   yield { type: 'done' };
-}
-
-/**
- * Gọi Edge Function `health-coach` (SSE streaming) từ client.
- *
- * §6.2: dùng `expo/fetch` (có trong Expo Go, hỗ trợ stream). Fallback không stream
- * nếu response.body không có (web/legacy) — hook `use-chat` che giấu sự khác biệt.
- *
- * §2 bảo mật: JWT từ session được gửi qua header Authorization (không lặp lại
- * key). 401 → refresh session 1 lần rồi thử lại. 429/rate_limited → error event.
- */
-
-import { fetch as expoFetch } from 'expo/fetch';
-import { supabase, SUPABASE_URL } from './supabase';
-
-// Edge Function URL (§5.1). Dùng SUPABASE_URL export để không truy cập protected field.
-const EDGE_URL = `${SUPABASE_URL}/functions/v1/health-coach`;
-
-// §5.3 — các SSE event name
-export type ChatEvent =
-  | { type: 'meta'; conversation_id: string | null }
-  | { type: 'tool'; name: string; status: string }
-  | { type: 'delta'; text: string }
-  | { type: 'done' }
-  | { type: 'error'; code: string; message: string };
-
-export interface ChatRequest {
-  message: string;
-  conversation_id?: string | null;
-  locale?: string;
 }
 
 /** Parse SSE stream từ response.body → async generator ChatEvent. */
@@ -224,6 +279,7 @@ export async function* streamChat(
     yield* callDirectGemini(req, signal, directApiKey.trim());
     return;
   }
+
   const token = await getAccessToken();
   if (!token) throw new Error('Chưa đăng nhập');
 
@@ -245,7 +301,7 @@ export async function* streamChat(
       body,
       signal,
     });
-  } catch (e) {
+  } catch {
     if (signal.aborted) return;
     yield* simulateLocalCoach(req, signal);
     return;
@@ -294,14 +350,10 @@ export async function* streamChat(
 
 /** Lấy JWT hiện tại; refresh nếu cần. */
 async function getAccessToken(): Promise<string | null> {
-  try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data.session?.access_token) {
-      const { data: refreshed } = await supabase.auth.refreshSession();
-      return refreshed.session?.access_token ?? 'demo-token';
-    }
-    return data.session.access_token;
-  } catch {
-    return 'demo-token';
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session?.access_token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    return refreshed.session?.access_token ?? null;
   }
+  return data.session.access_token;
 }
