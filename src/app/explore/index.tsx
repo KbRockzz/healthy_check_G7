@@ -2,200 +2,79 @@
  * Màn hình Khám phá kiến thức y tế (Explore Screen)
  * Kho bài viết phong phú, phân loại chi tiết, bộ lọc thông minh & tìm kiếm
  */
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert,
+  TextInput, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT_SIZES, BORDER_RADIUS, SHADOWS, FONT_FAMILY } from '@/theme';
+import { COLORS, SHADOWS, FONT_FAMILY } from '@/theme';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { supabase } from '@/lib/supabase';
-import { HealthContent } from '@/lib/supabase';
+import { useExplore } from '@/lib/hooks/use-explore';
 import BottomTabBar from '@/components/bottom-tab-bar';
+import type { ContentCategory } from '@/lib/supabase';
+import {
+  CATEGORY_ICONS,
+  CATEGORY_LABELS,
+  CATEGORIES,
+  EXPLORE_STATS,
+  getCategoryColor,
+  getCategoryLabel,
+} from '@/lib/explore-constants';
 
-type Category = 'all' | 'nutrition' | 'sleep' | 'running' | 'womens_health' | 'sports' | 'mental_health';
+type Category = 'all' | 'saved' | ContentCategory;
 type SortOption = 'newest' | 'views' | 'upvotes';
 
 const CATEGORY_TABS: { label: string; value: Category; icon: string }[] = [
   { label: 'Tất cả', value: 'all', icon: 'grid-outline' },
-  { label: 'Dinh dưỡng', value: 'nutrition', icon: 'restaurant-outline' },
-  { label: 'Giấc ngủ', value: 'sleep', icon: 'moon-outline' },
-  { label: 'Chạy bộ', value: 'running', icon: 'walk-outline' },
-  { label: 'Sức khỏe nữ', value: 'womens_health', icon: 'rose-outline' },
-  { label: 'Thể thao', value: 'sports', icon: 'barbell-outline' },
-  { label: 'Tâm lý', value: 'mental_health', icon: 'leaf-outline' },
+  { label: 'Đã lưu', value: 'saved', icon: 'bookmark-outline' },
+  ...CATEGORIES.map(cat => ({ label: CATEGORY_LABELS[cat], value: cat, icon: CATEGORY_ICONS[cat] })),
 ];
-
-// Extended interface with additional UI fields
-interface DetailedArticle extends HealthContent {
-  author_role: string;
-  author_avatar?: string;
-  key_takeaways: string[];
-  quote?: {
-    text: string;
-    author: string;
-  };
-  action_tips: string[];
-}
-
-// Map DB category to UI fields
-function enrichArticleFromDB(art: HealthContent): DetailedArticle {
-  const authorRoles: Record<string, string> = {
-    'nutrition': 'Chuyên gia Dinh dưỡng',
-    'sleep': 'Chuyên gia Y học Giấc ngủ',
-    'running': 'Huấn luyện viên Chạy bộ',
-    'womens_health': 'Bác sĩ Sản phụ khoa',
-    'sports': 'Huấn luyện viên Thể thao',
-    'mental_health': 'Chuyên gia Tâm lý',
-  };
-  const categoriesWithTags: Record<string, string[]> = {
-    'nutrition': ['dinh_duong', 'trao_doi_chat'],
-    'sleep': ['giac_ngu', 'phuc_hoi'],
-    'running': ['chay_bo', 'tap_luyen'],
-    'womens_health': ['phu_nu', 'hormone'],
-    'sports': ['the_thao', 'phuc_hoi'],
-    'mental_health': ['tam_ly', 'thien_an'],
-  };
-  const categoriesWithQuotes: Record<string, { text: string; author: string }> = {
-    'nutrition': {
-      text: 'Thực phẩm bạn ăn mỗi ngày có thể là liều thuốc an toàn nhất hoặc là chất độc tích tụ chậm nhất.',
-      author: 'Chuyên gia Dinh dưỡng',
-    },
-    'sleep': {
-      text: 'Giấc ngủ không phải là sự nghỉ ngơi, mà là quá trình phục hồi và tái tạo thiết yếu nhất.',
-      author: 'Chuyên gia Y học Giấc ngủ',
-    },
-    'running': {
-      text: 'Chạy bộ không phải là chạy nhanh, mà là chạy đều đặn và kiên trì.',
-      author: 'Huấn luyện viên Chạy bộ',
-    },
-    'womens_health': {
-      text: 'Hiểu cơ thể mình là bước đầu tiên để chăm sóc sức khỏe toàn diện.',
-      author: 'Bác sĩ Sản phụ khoa',
-    },
-    'sports': {
-      text: 'Thể thao không chỉ rèn cơ thể, mà còn rèn ý chí.',
-      author: 'Huấn luyện viên Thể thao',
-    },
-    'mental_health': {
-      text: 'Sức khỏe tâm thần quan trọng không kém sức khỏe thể chất.',
-      author: 'Chuyên gia Tâm lý',
-    },
-  };
-  const categoriesWithActions: Record<string, string[]> = {
-    'nutrition': [
-      'Uống 1 cốc nước ấm cùng vài giọt chanh vào mỗi buổi sáng.',
-      'Đảm bảo mỗi bữa chính luôn có ít nhất 25-30g protein chất lượng cao.',
-      'Bổ sung quả mọng hoặc một nắm nhỏ hạt hạnh nhân vào bữa phụ.',
-    ],
-    'sleep': [
-      'Cố định giờ thức dậy, kể cả cuối tuần.',
-      'Cắt caffeine sau 14h, phòng ngủ 26-28°C.',
-      'Tắt màn hình 45 phút trước giờ ngủ mục tiêu.',
-    ],
-    'running': [
-      'Tăng cự ly không quá 10% mỗi tuần.',
-      'Xen kẽ đi bộ - chạy để tránh chấn thương.',
-      'Theo dõi Steps để biết khi nào đang quá tải.',
-    ],
-    'womens_health': [
-      'Ghi nhận triệu chứng mỗi ngày để tìm quy luật.',
-      'Ăn đủ protein để ổn định đường huyết.',
-      'Ngủ đủ 7 tiếng để giảm cơn thèm ăn.',
-    ],
-    'sports': [
-      'Tập lực 3-4 lần/tuần, xen kẽ cardio.',
-      'Protein sau tập trong vòng 30 phút.',
-      'Ngủ 7-9 tiếng để phục hồi cơ bắp.',
-    ],
-    'mental_health': [
-      'Thiền 5-10 phút mỗi ngày.',
-      'Ghi nhật ký cảm xúc hàng ngày.',
-      'Hạn chế mạng xã hội trước khi ngủ.',
-    ],
-  };
-
-  return {
-    ...art,
-    author_role: authorRoles[art.category] || 'Chuyên gia Healthy Check',
-    author_avatar: undefined,
-    key_takeaways: [],
-    quote: categoriesWithQuotes[art.category],
-    action_tips: categoriesWithActions[art.category] || [],
-    tags: art.tags || categoriesWithTags[art.category] || [],
-  };
-}
 
 export default function ExploreScreen() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
-  const [articles, setArticles] = useState<DetailedArticle[]>([]);
+  const {
+    articles,
+    likedIds,
+    savedIds,
+    loading,
+    offline,
+    refresh,
+    toggleLike,
+    toggleSave,
+  } = useExplore();
+
   const [category, setCategory] = useState<Category>('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [likedArticles, setLikedArticles] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(true);
-
-  const fetchArticles = useCallback(async () => {
-    if (!session) return;
-    try {
-      setLoading(true);
-      // Fetch articles with their upvote counts from DB
-      const { data, error } = await supabase
-        .from('health_content')
-        .select('*')
-        .eq('is_published', true)
-        .order('published_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch user's vote state
-      if (session.user?.id) {
-        const { data: votesData } = await supabase
-          .from('content_votes')
-          .select('content_id, voted')
-          .eq('user_id', session.user.id);
-
-        if (votesData) {
-          const voteMap: Record<string, boolean> = {};
-          votesData.forEach(v => {
-            voteMap[v.content_id] = v.voted;
-          });
-          setLikedArticles(voteMap);
-        }
-      }
-
-      if (data && data.length > 0) {
-        // Enrich DB articles with UI fields
-        const enriched = data.map(enrichArticleFromDB);
-        setArticles(enriched);
-      }
-    } catch (err) {
-      console.error('Fetch articles error:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [session]);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
     if (!session) {
       router.replace('/auth/sign-in');
-      return;
     }
-    fetchArticles();
-  }, [session, authLoading, fetchArticles]);
+  }, [session, authLoading, router]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  };
 
   // Count articles per category
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: articles.length };
+    const counts: Record<string, number> = {
+      all: articles.length,
+      saved: articles.filter(a => savedIds.has(a.id)).length,
+    };
     articles.forEach(art => {
       counts[art.category] = (counts[art.category] || 0) + 1;
     });
     return counts;
-  }, [articles]);
+  }, [articles, savedIds]);
 
   // Featured article
   const featuredArticle = useMemo(() => {
@@ -205,7 +84,12 @@ export default function ExploreScreen() {
   // Filtered and sorted articles
   const filteredArticles = useMemo(() => {
     let result = articles.filter((art) => {
-      const matchCat = category === 'all' || art.category === category;
+      const matchCat =
+        category === 'all'
+          ? true
+          : category === 'saved'
+          ? savedIds.has(art.id)
+          : art.category === category;
       const q = search.trim().toLowerCase();
       const matchSearch =
         !q ||
@@ -225,66 +109,10 @@ export default function ExploreScreen() {
     }
 
     return result;
-  }, [articles, category, search, sortBy]);
+  }, [articles, category, savedIds, search, sortBy]);
 
   const handleOpenArticle = (slug: string) => {
     router.push({ pathname: '/explore/[slug]', params: { slug } });
-  };
-
-  const handleToggleLike = async (article: DetailedArticle) => {
-    if (!session?.user?.id || !article) return;
-
-    const isLiked = likedArticles[article.id];
-    const newVote = !isLiked;
-
-    // Optimistic update
-    setLikedArticles(prev => ({ ...prev, [article.id]: newVote }));
-    setArticles(prev =>
-      prev.map(art => {
-        if (art.id === article.id) {
-          return {
-            ...art,
-            upvotes: isLiked ? art.upvotes - 1 : art.upvotes + 1,
-          };
-        }
-        return art;
-      })
-    );
-
-    // Call RPC to persist vote in DB
-    try {
-      const { data, error } = await supabase.rpc('vote_article', {
-        p_content: article.id,
-        p_vote: newVote,
-      });
-
-      if (error) throw error;
-
-      // Update with actual count from DB
-      setArticles(prev =>
-        prev.map(art => {
-          if (art.id === article.id) {
-            return { ...art, upvotes: data as number };
-          }
-          return art;
-        })
-      );
-    } catch (err) {
-      console.error('Vote error:', err);
-      // Revert on error
-      setLikedArticles(prev => ({ ...prev, [article.id]: isLiked }));
-      setArticles(prev =>
-        prev.map(art => {
-          if (art.id === article.id) {
-            return {
-              ...art,
-              upvotes: isLiked ? art.upvotes + 1 : art.upvotes - 1,
-            };
-          }
-          return art;
-        })
-      );
-    }
   };
 
   const handleTagPress = (tag: string) => {
@@ -293,7 +121,18 @@ export default function ExploreScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -305,15 +144,27 @@ export default function ExploreScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Banner Offline */}
+        {offline && !loading && (
+          <View style={styles.offlineBanner}>
+            <Ionicons name="cloud-offline-outline" size={18} color="#B45309" />
+            <Text style={styles.offlineBannerText}>
+              Không kết nối được máy chủ — đang hiển thị nội dung có sẵn trong app.
+            </Text>
+          </View>
+        )}
+
         {/* Quick Stats Pill */}
         <View style={styles.statsRow}>
           <View style={styles.statPill}>
-            <Ionicons name="book-outline" size={16} color={COLORS.primary} />
+            <Ionicons name={EXPLORE_STATS[0].icon} size={16} color={EXPLORE_STATS[0].color} />
             <Text style={styles.statPillText}>{articles.length} bài viết chuyên sâu</Text>
           </View>
           <View style={styles.statPill}>
-            <Ionicons name="shield-checkmark-outline" size={16} color="#10B981" />
-            <Text style={[styles.statPillText, { color: '#047857' }]}>100% kiểm duyệt y khoa</Text>
+            <Ionicons name={EXPLORE_STATS[1].icon} size={16} color={EXPLORE_STATS[1].color} />
+            <Text style={[styles.statPillText, { color: EXPLORE_STATS[1].textColor }]}>
+              {EXPLORE_STATS[1].text}
+            </Text>
           </View>
         </View>
 
@@ -367,7 +218,7 @@ export default function ExploreScreen() {
               <Text style={styles.sectionTitle}>📌 Bài viết tiêu điểm</Text>
               <View style={styles.featuredPill}>
                 <Ionicons name="flame" size={14} color="#FFFFFF" />
-                <Text style={styles.featuredPillText}>ĐỌC NHIỀU NHẤT</Text>
+                <Text style={styles.featuredPillText}>NỔI BẬT</Text>
               </View>
             </View>
 
@@ -395,14 +246,31 @@ export default function ExploreScreen() {
                   <View style={styles.authorAvatarWrap}>
                     <Ionicons name="person" size={14} color={COLORS.primary} />
                   </View>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <Text style={styles.featuredAuthor}>{featuredArticle.author}</Text>
-                    <Text style={styles.featuredRole} numberOfLines={1}>{featuredArticle.author_role}</Text>
+                    {featuredArticle.author_role ? (
+                      <Text style={styles.featuredRole} numberOfLines={1}>{featuredArticle.author_role}</Text>
+                    ) : null}
                   </View>
                 </View>
                 <View style={styles.featuredStats}>
                   <Text style={styles.statCount}>👁️ {featuredArticle.views}</Text>
-                  <Text style={styles.statCount}>❤️ {featuredArticle.upvotes}</Text>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleLike(featuredArticle.id);
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    <Ionicons
+                      name={likedIds.has(featuredArticle.id) ? 'heart' : 'heart-outline'}
+                      size={14}
+                      color={likedIds.has(featuredArticle.id) ? '#EF4444' : '#94A3B8'}
+                    />
+                    <Text style={[styles.statCount, likedIds.has(featuredArticle.id) && { color: '#EF4444' }]}>
+                      {featuredArticle.upvotes}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </TouchableOpacity>
@@ -413,7 +281,11 @@ export default function ExploreScreen() {
         <View style={styles.listHeaderRow}>
           <View>
             <Text style={styles.sectionTitle}>
-              {category === 'all' ? 'Tất cả bài viết' : `Chuyên mục: ${getCategoryLabel(category)}`}
+              {category === 'all'
+                ? 'Tất cả bài viết'
+                : category === 'saved'
+                ? 'Bài viết đã lưu'
+                : `Chuyên mục: ${getCategoryLabel(category)}`}
             </Text>
             <Text style={styles.listSubtitle}>Tìm thấy {filteredArticles.length} bài viết</Text>
           </View>
@@ -440,23 +312,40 @@ export default function ExploreScreen() {
 
         {/* Articles List */}
         {filteredArticles.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="search-outline" size={48} color={COLORS.textTertiary} />
-            <Text style={styles.emptyTitle}>Không tìm thấy bài viết</Text>
-            <Text style={styles.emptySub}>Thử tìm từ khóa khác hoặc chuyển sang danh mục "Tất cả"</Text>
-            <TouchableOpacity
-              style={styles.resetBtn}
-              onPress={() => {
-                setSearch('');
-                setCategory('all');
-              }}
-            >
-              <Text style={styles.resetBtnText}>Đặt lại bộ lọc</Text>
-            </TouchableOpacity>
-          </View>
+          category === 'saved' ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="bookmark-outline" size={48} color={COLORS.textTertiary} />
+              <Text style={styles.emptyTitle}>Chưa có bài viết nào được lưu</Text>
+              <Text style={styles.emptySub}>
+                Hãy nhấn biểu tượng bookmark ở bài viết bạn yêu thích để xem lại sau
+              </Text>
+              <TouchableOpacity
+                style={styles.resetBtn}
+                onPress={() => setCategory('all')}
+              >
+                <Text style={styles.resetBtnText}>Khám phá bài viết</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.emptyCard}>
+              <Ionicons name="search-outline" size={48} color={COLORS.textTertiary} />
+              <Text style={styles.emptyTitle}>Không tìm thấy bài viết</Text>
+              <Text style={styles.emptySub}>Thử tìm từ khóa khác hoặc chuyển sang danh mục &#34;Tất cả&#34;</Text>
+              <TouchableOpacity
+                style={styles.resetBtn}
+                onPress={() => {
+                  setSearch('');
+                  setCategory('all');
+                }}
+              >
+                <Text style={styles.resetBtnText}>Đặt lại bộ lọc</Text>
+              </TouchableOpacity>
+            </View>
+          )
         ) : (
           filteredArticles.map((art) => {
-            const isLiked = !!likedArticles[art.id];
+            const isLiked = likedIds.has(art.id);
+            const isSaved = savedIds.has(art.id);
             const catColor = getCategoryColor(art.category);
             return (
               <TouchableOpacity
@@ -478,7 +367,20 @@ export default function ExploreScreen() {
                     <TouchableOpacity
                       onPress={(e) => {
                         e.stopPropagation();
-                        handleToggleLike(art);
+                        toggleSave(art.id);
+                      }}
+                      style={styles.actionIconBtn}
+                    >
+                      <Ionicons
+                        name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                        size={18}
+                        color={isSaved ? COLORS.primary : COLORS.textTertiary}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        toggleLike(art.id);
                       }}
                       style={styles.heartBtn}
                     >
@@ -523,7 +425,10 @@ export default function ExploreScreen() {
                 <View style={styles.authorFooter}>
                   <Ionicons name="medical" size={13} color={COLORS.primary} style={{ marginRight: 6 }} />
                   <Text style={styles.authorName} numberOfLines={1}>
-                    {art.author} <Text style={styles.authorSub}>• {art.author_role.split('-')[0].trim()}</Text>
+                    {art.author}
+                    {art.author_role ? (
+                      <Text style={styles.authorSub}> • {art.author_role.split('-')[0].trim()}</Text>
+                    ) : null}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -536,32 +441,6 @@ export default function ExploreScreen() {
       <BottomTabBar currentRoute="/explore" onTabPress={(route) => router.push(route as any)} />
     </View>
   );
-}
-
-function getCategoryColor(cat: string): string {
-  const colors: Record<string, string> = {
-    nutrition: '#D97706',
-    sports: '#10B981',
-    running: '#0284C7',
-    sleep: '#8B5CF6',
-    mental_health: '#3B82F6',
-    womens_health: '#DB2777',
-    lifestyle: '#059669',
-  };
-  return colors[cat] || '#0284C7';
-}
-
-function getCategoryLabel(cat: string): string {
-  const labels: Record<string, string> = {
-    nutrition: 'Dinh dưỡng',
-    sports: 'Thể thao',
-    running: 'Chạy bộ',
-    sleep: 'Giấc ngủ',
-    mental_health: 'Tâm lý',
-    womens_health: 'Sức khỏe nữ',
-    lifestyle: 'Lối sống',
-  };
-  return labels[cat] || cat;
 }
 
 const styles = StyleSheet.create({
@@ -577,6 +456,24 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONT_FAMILY.bold as string },
   subtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2, fontFamily: FONT_FAMILY.base as string },
   avatarBtn: { padding: 4 },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 14,
+    gap: 8,
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#92400E',
+    fontFamily: FONT_FAMILY.medium as string,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -687,8 +584,9 @@ const styles = StyleSheet.create({
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   catBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   catBadgeText: { fontSize: 11, fontWeight: '700', fontFamily: FONT_FAMILY.bold as string },
-  cardHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cardHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   readMinutes: { fontSize: 11, color: COLORS.textTertiary, fontFamily: FONT_FAMILY.base as string },
+  actionIconBtn: { paddingVertical: 2, paddingHorizontal: 2 },
   heartBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
   heartCount: { fontSize: 11, fontWeight: '600', color: COLORS.textTertiary, fontFamily: FONT_FAMILY.semiBold as string },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.textPrimary, lineHeight: 22, marginBottom: 6, fontFamily: FONT_FAMILY.bold as string },
