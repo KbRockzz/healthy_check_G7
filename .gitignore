@@ -32,6 +32,9 @@ yarn-error.*
 
 # local env files
 .env*.local
+# `.env` (không chỉ `.env.local`) — file này đang được commit; chỉ chứa
+# SUPABASE_ANON_KEY (công khai). Sau khi tạo `.env.example`, `.env` sẽ bị ignore.
+.env
 
 # typescript
 *.tsbuildinfo

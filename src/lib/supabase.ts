@@ -176,6 +176,31 @@ export interface HealthScoreHistory {
 }
 
 // ---------------------------------------------------------------------
+// Chatbot "Health Coach" — loại dữ liệu lịch sử hội thoại
+// (migration 0013_chat.sql)
+// ---------------------------------------------------------------------
+export type ChatRole = 'user' | 'assistant';
+export type ChatSafetyFlag = 'emergency' | 'refused';
+
+export interface ChatConversation {
+  id: string;
+  user_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  conversation_id: string;
+  user_id: string;
+  role: ChatRole;
+  content: string;
+  safety_flag: ChatSafetyFlag | null;
+  created_at: string;
+}
+
+// ---------------------------------------------------------------------
 // Dashboard Summary type
 // ---------------------------------------------------------------------
 export interface DashboardSummary {
@@ -285,6 +310,9 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
+
+/** Public URL — dùng để build Edge Function URL (không truy cập protected field). */
+export const SUPABASE_URL = supabaseUrl;
 
 export { supabase };
 export default supabase;

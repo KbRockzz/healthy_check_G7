@@ -9,6 +9,7 @@ import { COLORS } from '@/theme';
 import { AuthProvider, useAuth } from '@/lib/hooks/use-auth';
 import { useSplashScreen } from '@/lib/hooks/use-splash-screen';
 import { useDeepLinking } from '@/lib/hooks/use-deep-linking';
+import { ChatFAB } from '@/components/chat/chat-fab';
 
 // Content component - uses hooks inside AuthProvider
 function LayoutContent() {
@@ -81,7 +82,10 @@ function LayoutContent() {
         <Stack.Screen name="share" options={{ title: 'Sharing' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
         <Stack.Screen name="settings/goals" options={{ title: 'Goals' }} />
+        <Stack.Screen name="chat" options={{ title: 'Health Coach', headerShown: false }} />
       </Stack>
+      {/* Floating Action Button — Health Coach (§6.3) */}
+      <ChatFAB />
     </>
   );
 }

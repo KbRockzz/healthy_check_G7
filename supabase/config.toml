@@ -1,0 +1,10 @@
+# Supabase CLI config — Healthy Check (G7)
+# Secret (GEMINI_API_KEY, LLM_MODEL, CHAT_DAILY_LIMIT) KHÔNG đặt ở đây.
+# Đặt qua lệnh: supabase secrets set GEMINI_API_KEY=... LLM_MODEL=gemini-3.5-flash-lite CHAT_DAILY_LIMIT=30
+
+project_id = "pmaxtdfevzncqpbamwcq"
+
+[functions.health-coach]
+# verify_jwt = true: nền tảng chặn request không có JWT hợp lệ TRƯỚC khi hàm chạy.
+# Trong handler vẫn giải mã payload để lấy sub (auth.uid()) và role.
+verify_jwt = true
