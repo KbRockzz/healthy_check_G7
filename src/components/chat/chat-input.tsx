@@ -39,19 +39,21 @@ export function ChatInput({ onSend, onStop, streaming, disabled, prefill }: Prop
 
   return (
     <View style={styles.wrap}>
-      <TextInput
-        style={styles.input}
-        value={text}
-        onChangeText={(t) => setText(t.slice(0, MAX_LEN))}
-        placeholder="Nhập câu hỏi sức khỏe..."
-        placeholderTextColor={COLORS.textTertiary}
-        multiline
-        maxLength={MAX_LEN}
-        onSubmitEditing={handleSend}
-        blurOnSubmit={false}
-        editable={!disabled}
-        accessibilityLabel="Nhập tin nhắn"
-      />
+      <View style={styles.inputPill}>
+        <TextInput
+          style={styles.input}
+          value={text}
+          onChangeText={(t) => setText(t.slice(0, MAX_LEN))}
+          placeholder="Nhập câu hỏi sức khỏe..."
+          placeholderTextColor={COLORS.textTertiary}
+          multiline
+          maxLength={MAX_LEN}
+          onSubmitEditing={handleSend}
+          blurOnSubmit={false}
+          editable={!disabled}
+          accessibilityLabel="Nhập tin nhắn"
+        />
+      </View>
       {streaming ? (
         <TouchableOpacity
           style={[styles.btn, styles.stopBtn]}
@@ -85,25 +87,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     backgroundColor: COLORS.bg,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     gap: 8,
   },
-  input: {
+  inputPill: {
     flex: 1,
-    maxHeight: 120,
     minHeight: 44,
+    maxHeight: 120,
+    justifyContent: 'center',
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 11 : 9,
     borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  input: {
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    margin: 0,
     fontSize: FONT_SIZES.base,
     fontFamily: FONT_FAMILY.base,
     color: COLORS.textPrimary,
+    lineHeight: 22,
+    minHeight: 22,
+    maxHeight: 100,
+    textAlignVertical: 'center',
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none', resize: 'none', height: 22 } as any) : {}),
   },
   btn: {
     width: 44,
