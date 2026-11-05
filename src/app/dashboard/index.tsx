@@ -151,7 +151,11 @@ export default function HomeScreen() {
       }
 
       // 6. Fetch health score from dashboard summary
-      const { data: summaryData } = await supabase.rpc('get_dashboard_summary');
+      // Luôn truyền p_day = ngày local (today) để đồng bộ với health-data & share,
+      // tránh hiện tượng current_date theo timezone DB server khác local date -> score = 0
+      const { data: summaryData } = await supabase.rpc('get_dashboard_summary', {
+        p_day: today,
+      });
       if (summaryData?.health_score) {
         setHealthScore(summaryData.health_score.score || 0);
       } else {
