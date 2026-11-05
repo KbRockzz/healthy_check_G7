@@ -6,9 +6,8 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
-import type { ChatEvent } from '../chat-api';
 import { streamChat } from '../chat-api';
-import type { ChatRole } from '../supabase';
+import { supabase, type ChatRole } from '../supabase';
 
 export interface ChatMessage {
   id: string;
@@ -25,6 +24,7 @@ interface UseChatReturn {
   currentTool: string | null;
   error: string | null;
   sendMessage: (text: string) => Promise<void>;
+  loadConversation: (convId: string) => Promise<void>;
   stop: () => void;
   reset: () => void;
 }
@@ -118,6 +118,35 @@ export function useChat(): UseChatReturn {
     [conversationId, isStreaming, pushMessage, updateAssistant]
   );
 
+  const loadConversation = useCallback(async (convId: string) => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsStreaming(false);
+    setError(null);
+
+    try {
+      const { data, error: dbErr } = await supabase
+        .from('chat_messages')
+        .select('id, role, content, safety_flag')
+        .eq('conversation_id', convId)
+        .order('id', { ascending: true });
+      if (dbErr || !data) return;
+
+      const loaded: ChatMessage[] = data.map((row: { id: number | string; role: string; content: string; safety_flag?: string | null }) => ({
+        id: `db-${row.id}`,
+        role: (row.role === 'assistant' ? 'assistant' : 'user') as ChatRole,
+        content: row.content,
+        safety: (row.safety_flag as 'emergency' | 'refused' | null) ?? null,
+      }));
+      messagesRef.current = loaded;
+      assistantRef.current = null;
+      setMessages(loaded);
+      setConversationId(convId);
+    } catch {
+      // Ignore error
+    }
+  }, []);
+
   const stop = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -143,6 +172,7 @@ export function useChat(): UseChatReturn {
     currentTool,
     error,
     sendMessage,
+    loadConversation,
     stop,
     reset,
   };

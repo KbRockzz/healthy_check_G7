@@ -28,6 +28,68 @@ export interface ChatRequest {
   locale?: string;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Đảm bảo có conversation_id hợp lệ trong bảng chat_conversations (khi chạy client-side) */
+async function ensureConversation(existingId?: string | null, firstMessage?: string): Promise<string | null> {
+  try {
+    if (existingId && UUID_RE.test(existingId)) return existingId;
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) return null;
+
+    const title = ((firstMessage || 'Cuộc trò chuyện mới').replace(/\s+/g, ' ').trim().split(' ').slice(0, 8).join(' ')).slice(0, 120);
+    const { data, error } = await supabase
+      .from('chat_conversations')
+      .insert({ user_id: userId, title })
+      .select('id')
+      .single();
+    if (error || !data?.id) return null;
+    return data.id as string;
+  } catch {
+    return null;
+  }
+}
+
+/** Lưu cặp tin nhắn user + assistant vào bảng chat_messages (khi chạy client-side) */
+async function saveMessagesToDb(
+  conversationId: string | null,
+  userText: string,
+  assistantText: string,
+  safetyFlag?: 'emergency' | 'refused' | null
+): Promise<void> {
+  try {
+    if (!conversationId || !UUID_RE.test(conversationId) || !assistantText.trim()) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    await supabase.from('chat_messages').insert([
+      {
+        conversation_id: conversationId,
+        user_id: userId,
+        role: 'user',
+        content: userText.slice(0, 8000),
+        safety_flag: safetyFlag ?? null,
+      },
+      {
+        conversation_id: conversationId,
+        user_id: userId,
+        role: 'assistant',
+        content: assistantText.slice(0, 8000),
+        safety_flag: safetyFlag ?? null,
+      },
+    ]);
+
+    await supabase
+      .from('chat_conversations')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', conversationId);
+  } catch {
+    // Bỏ qua nếu DB chưa cấp quyền INSERT cho authenticated
+  }
+}
+
 /** Lấy tên và dữ liệu sức khỏe thực tế của user đang đăng nhập từ Supabase */
 async function fetchRealUserContext(): Promise<{ fullName: string; summary: DashboardSummary | null }> {
   try {
@@ -55,15 +117,18 @@ async function fetchRealUserContext(): Promise<{ fullName: string; summary: Dash
 
 /** Gọi trực tiếp Google Gemini API với dữ liệu thật từ Supabase nếu có EXPO_PUBLIC_GEMINI_API_KEY */
 async function* callDirectGemini(req: ChatRequest, signal: AbortSignal, apiKey: string): AsyncGenerator<ChatEvent, void, unknown> {
-  yield { type: 'meta', conversation_id: req.conversation_id || 'conv-direct-gemini' };
+  const convId = await ensureConversation(req.conversation_id, req.message);
+  yield { type: 'meta', conversation_id: convId };
 
   const lower = req.message.toLowerCase();
   const isEmergency = /đau ngực|khó thở|ngất xỉu|co giật|chảy máu|đột quỵ|ngộ độc|cấp cứu|115/.test(lower);
   if (isEmergency) {
+    const emergencyText = '🚨 **Cấp cứu ngay**: Nếu bạn hoặc người thân đang gặp triệu chứng nguy hiểm như đau ngực, khó thở, ngất xỉu, co giật hoặc dấu hiệu đột quỵ — **hãy gọi 115 ngay lập tức** hoặc đến bệnh viện gần nhất. Đây là tình huống y tế khẩn cấp!';
     yield {
       type: 'delta',
-      text: '🚨 **Cấp cứu ngay**: Nếu bạn hoặc người thân đang gặp triệu chứng nguy hiểm như đau ngực, khó thở, ngất xỉu, co giật hoặc dấu hiệu đột quỵ — **hãy gọi 115 ngay lập tức** hoặc đến bệnh viện gần nhất. Đây là tình huống y tế khẩn cấp!',
+      text: emergencyText,
     };
+    await saveMessagesToDb(convId, req.message, emergencyText, 'emergency');
     yield { type: 'done' };
     return;
   }
@@ -106,14 +171,14 @@ Hãy trả lời dựa sát trên dữ liệu thật này của người dùng.`
     });
 
     if (!resp.ok) {
-      yield* simulateLocalCoach(req, signal, { fullName, summary });
+      yield* simulateLocalCoach({ ...req, conversation_id: convId }, signal, { fullName, summary });
       return;
     }
 
     const json = await resp.json();
     const replyText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     if (!replyText) {
-      yield* simulateLocalCoach(req, signal, { fullName, summary });
+      yield* simulateLocalCoach({ ...req, conversation_id: convId }, signal, { fullName, summary });
       return;
     }
 
@@ -123,9 +188,10 @@ Hãy trả lời dựa sát trên dữ liệu thật này của người dùng.`
       yield { type: 'delta', text: words.slice(i, i + 3).join(' ') + ' ' };
       await new Promise((r) => setTimeout(r, 40));
     }
+    await saveMessagesToDb(convId, req.message, replyText);
     yield { type: 'done' };
   } catch {
-    yield* simulateLocalCoach(req, signal, { fullName, summary });
+    yield* simulateLocalCoach({ ...req, conversation_id: convId }, signal, { fullName, summary });
   }
 }
 
@@ -135,26 +201,31 @@ async function* simulateLocalCoach(
   signal: AbortSignal,
   prefetched?: { fullName: string; summary: DashboardSummary | null }
 ): AsyncGenerator<ChatEvent, void, unknown> {
-  yield { type: 'meta', conversation_id: req.conversation_id || 'conv-local' };
+  const convId = await ensureConversation(req.conversation_id, req.message);
+  yield { type: 'meta', conversation_id: convId };
 
   const lower = req.message.toLowerCase();
   const isEmergency = /đau ngực|khó thở|ngất xỉu|co giật|chảy máu|đột quỵ|ngộ độc|cấp cứu|115/.test(lower);
   const isSelfHarm = /tự tử|muốn chết|không muốn sống|tự hại/.test(lower);
 
   if (isEmergency) {
+    const emergencyText = '🚨 **Cấp cứu ngay**: Nếu bạn hoặc người thân đang gặp triệu chứng nguy hiểm như đau ngực, khó thở, ngất xỉu, co giật hoặc dấu hiệu đột quỵ — **hãy gọi 115 ngay lập tức** hoặc đến bệnh viện gần nhất. Đây là tình huống y tế khẩn cấp!';
     yield {
       type: 'delta',
-      text: '🚨 **Cấp cứu ngay**: Nếu bạn hoặc người thân đang gặp triệu chứng nguy hiểm như đau ngực, khó thở, ngất xỉu, co giật hoặc dấu hiệu đột quỵ — **hãy gọi 115 ngay lập tức** hoặc đến bệnh viện gần nhất. Đây là tình huống y tế khẩn cấp!',
+      text: emergencyText,
     };
+    await saveMessagesToDb(convId, req.message, emergencyText, 'emergency');
     yield { type: 'done' };
     return;
   }
 
   if (isSelfHarm) {
+    const selfHarmText = '💙 Bạn đang trải qua cảm giác rất nặng nề phải không? Hãy nhớ rằng bạn không đơn độc và luôn có người sẵn sàng lắng nghe. Hãy liên hệ ngay với người thân hoặc cơ sở y tế gần nhất. Nếu đang gặp nguy hiểm tức thì, hãy gọi **115** ngay nhé!';
     yield {
       type: 'delta',
-      text: '💙 Bạn đang trải qua cảm giác rất nặng nề phải không? Hãy nhớ rằng bạn không đơn độc và luôn có người sẵn sàng lắng nghe. Hãy liên hệ ngay với người thân hoặc cơ sở y tế gần nhất. Nếu đang gặp nguy hiểm tức thì, hãy gọi **115** ngay nhé!',
+      text: selfHarmText,
     };
+    await saveMessagesToDb(convId, req.message, selfHarmText, 'emergency');
     yield { type: 'done' };
     return;
   }
@@ -207,6 +278,7 @@ async function* simulateLocalCoach(
     await new Promise((r) => setTimeout(r, 50));
   }
 
+  await saveMessagesToDb(convId, req.message, reply);
   yield { type: 'done' };
 }
 

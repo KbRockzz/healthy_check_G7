@@ -75,7 +75,9 @@ export default function ChatScreen() {
 
   const handleSend = (text: string) => {
     if (!userId) return;
-    void chat.sendMessage(text);
+    void chat.sendMessage(text).then(() => {
+      void history.load();
+    });
   };
 
   const handleNewChat = () => {
@@ -101,9 +103,8 @@ export default function ChatScreen() {
   };
 
   const handleOpenConversation = async (id: string) => {
-    // Phase 6: mở lại hội thoại cũ (nạp message từ DB)
     setHistoryOpen(false);
-    void id;
+    await chat.loadConversation(id);
   };
 
   return (
@@ -129,7 +130,10 @@ export default function ChatScreen() {
           <Text style={styles.headerSub}>Trợ lý sức khỏe của bạn</Text>
         </View>
         <TouchableOpacity
-          onPress={() => setHistoryOpen(true)}
+          onPress={() => {
+            void history.load();
+            setHistoryOpen(true);
+          }}
           style={styles.headerBtn}
           accessibilityLabel="Lịch sử trò chuyện"
         >
@@ -206,7 +210,7 @@ export default function ChatScreen() {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.historyRow}
-                onPress={() => handleOpenConversation(item.id)}
+                onPress={() => void handleOpenConversation(item.id)}
               >
                 <View style={styles.historyRowText}>
                   <Text style={styles.historyItemTitle} numberOfLines={1}>

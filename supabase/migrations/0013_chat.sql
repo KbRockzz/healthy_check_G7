@@ -5,11 +5,6 @@
 --   * chat_conversations  — mỗi cuộc trò chuyện (1 user, nhiều message)
 --   * chat_messages       — user / assistant, có cột safety_flag
 --   * chat_usage          — hạn mức tin nhắn theo ngày (user_id, usage_date)
--- Quy tắc bảo mật (đã chốt trong plan §4):
---   - Client (authenticated) chỉ ĐƯỢC select + delete của chính mình.
---   - Không có policy insert/update cho client: mọi ghi do Edge Function
---     dùng service role thực hiện, tránh client giả mạo lượt assistant.
---   - chat_usage không có policy cho client (chỉ service role truy cập).
 -- =====================================================================
 
 BEGIN;
@@ -55,32 +50,52 @@ create table if not exists public.chat_usage (
 );
 
 -- ---------------------------------------------------------------------
--- 4. RLS: client chỉ ĐỌC và XOÁ của chính mình
+-- 4. RLS: client ĐỌC, GHI, CẬP NHẬT và XOÁ hội thoại của chính mình
 -- ---------------------------------------------------------------------
 alter table public.chat_conversations enable row level security;
 alter table public.chat_messages      enable row level security;
 alter table public.chat_usage         enable row level security;
 
+drop policy if exists "own conversations select" on public.chat_conversations;
 create policy "own conversations select"
   on public.chat_conversations for select
   using (user_id = auth.uid());
 
+drop policy if exists "own conversations insert" on public.chat_conversations;
+create policy "own conversations insert"
+  on public.chat_conversations for insert
+  with check (user_id = auth.uid());
+
+drop policy if exists "own conversations update" on public.chat_conversations;
+create policy "own conversations update"
+  on public.chat_conversations for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+drop policy if exists "own conversations delete" on public.chat_conversations;
 create policy "own conversations delete"
   on public.chat_conversations for delete
   using (user_id = auth.uid());
 
+drop policy if exists "own messages select" on public.chat_messages;
 create policy "own messages select"
   on public.chat_messages for select
   using (user_id = auth.uid());
+
+drop policy if exists "own messages insert" on public.chat_messages;
+create policy "own messages insert"
+  on public.chat_messages for insert
+  with check (user_id = auth.uid());
 
 -- chat_usage: không có policy cho client → chỉ service role truy cập.
 
 -- ---------------------------------------------------------------------
 -- 5. Quyền bảng (PostgREST)
 -- ---------------------------------------------------------------------
-revoke all on public.chat_conversations, public.chat_messages, public.chat_usage from anon;
-grant select, delete on public.chat_conversations to authenticated;
-grant select on public.chat_messages to authenticated;
+grant select on public.chat_conversations, public.chat_messages to anon;
+grant select, insert, update, delete on public.chat_conversations to authenticated;
+grant select, insert, delete on public.chat_messages to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
 
 -- ---------------------------------------------------------------------
 -- 6. Hàm consume_chat_quota — giảm hạn mức ngày (security definer)
@@ -105,8 +120,6 @@ end;
 $$;
 
 revoke all on function public.consume_chat_quota(uuid, integer) from public, anon, authenticated;
--- Service role (Edge Function client B) là thành viên nhóm PUBLIC → sau REVOKE
--- vẫn phải được cấp rõ thì PostgREST mới cho gọi.
 grant execute on function public.consume_chat_quota(uuid, integer) to service_role;
 
 -- ---------------------------------------------------------------------
