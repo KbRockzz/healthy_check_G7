@@ -262,7 +262,7 @@ export default function HomeScreen() {
         {/* Top Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Good morning,</Text>
+            <Text style={styles.greeting}>Chào buổi sáng,</Text>
             <Text style={styles.name}>{userName} 👋</Text>
           </View>
           <View style={styles.headerRight}>
@@ -296,9 +296,9 @@ export default function HomeScreen() {
           <View style={styles.scoreLeft}>
             <View style={styles.scoreBadgePill}>
               <Ionicons name="shield-checkmark" size={14} color={COLORS.success} />
-              <Text style={styles.scoreBadgeText}>Daily Health Score</Text>
+              <Text style={styles.scoreBadgeText}>Điểm sức khỏe hôm nay</Text>
             </View>
-            <Text style={styles.scoreHeadline}>Excellent Condition</Text>
+            <Text style={styles.scoreHeadline}>Thể trạng xuất sắc</Text>
             <Text style={styles.scoreSubtext}>
               Dựa trên vận động, giấc ngủ và dinh dưỡng hôm nay. Nhấn để xem chi tiết chấm điểm.
             </Text>
@@ -341,7 +341,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/dashboard/water' as any)}
             >
               <Ionicons name="water" size={22} color="#3B82F6" />
-              <Text style={styles.waterTitle}>Hydration Tracker</Text>
+              <Text style={styles.waterTitle}>Theo dõi lượng nước</Text>
               <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
             </TouchableOpacity>
             <Text style={styles.waterStats}>
@@ -399,7 +399,7 @@ export default function HomeScreen() {
               </View>
               <Text style={styles.metricProgressText}>{Math.round((todaySteps / stepGoal) * 100)}%</Text>
             </View>
-            <Text style={styles.metricTitle}>Steps</Text>
+            <Text style={styles.metricTitle}>Bước chân</Text>
             <Text style={styles.metricValue}>{todaySteps.toLocaleString()}</Text>
             <Text style={styles.metricSub}>Mục tiêu: {stepGoal.toLocaleString()}</Text>
             <View style={styles.metricFooterPill}>
@@ -419,11 +419,11 @@ export default function HomeScreen() {
               </View>
               <Text style={[styles.metricProgressText, { color: '#8B5CF6' }]}>{sleepGoalDisplay > 0 ? Math.min(100, Math.round((todaySleepMins / sleepGoalDisplay) * 100)) : 0}%</Text>
             </View>
-            <Text style={styles.metricTitle}>Sleep</Text>
+            <Text style={styles.metricTitle}>Giấc ngủ</Text>
             <Text style={styles.metricValue}>{Math.floor(todaySleepMins / 60)}h {todaySleepMins % 60}m</Text>
             <Text style={styles.metricSub}>Mục tiêu: {Math.floor(sleepGoalDisplay / 60)}h {sleepGoalDisplay % 60}m</Text>
             <View style={[styles.metricFooterPill, { backgroundColor: '#F3E8FF' }]}>
-              <Text style={[styles.metricFooterPillText, { color: '#6B21A8' }]}>Deep: 2h 15m (30%)</Text>
+              <Text style={[styles.metricFooterPillText, { color: '#6B21A8' }]}>Ngủ sâu: 2h 15m (30%)</Text>
             </View>
           </TouchableOpacity>
 
@@ -439,7 +439,7 @@ export default function HomeScreen() {
               </View>
               <Text style={[styles.metricProgressText, { color: '#D97706' }]}>{calorieGoal > 0 ? Math.min(100, Math.round((todayCalories / calorieGoal) * 100)) : 0}%</Text>
             </View>
-            <Text style={styles.metricTitle}>Nutrition</Text>
+            <Text style={styles.metricTitle}>Dinh dưỡng</Text>
             <Text style={styles.metricValue}>{todayCalories} kcal</Text>
             <Text style={styles.metricSub}>Mục tiêu: {calorieGoal} kcal</Text>
             <View style={[styles.metricFooterPill, { backgroundColor: '#FEF3C7' }]}>
@@ -459,10 +459,10 @@ export default function HomeScreen() {
                   <Ionicons name="calendar" size={22} color="#DB2777" />
                 </View>
                 <Text style={[styles.metricProgressText, { color: '#DB2777' }]}>
-                  {currentDay > 0 ? `Day ${currentDay}` : '-'}
+                  {currentDay > 0 ? `Ngày ${currentDay}` : '-'}
                 </Text>
               </View>
-              <Text style={styles.metricTitle}>Cycle Tracking</Text>
+              <Text style={styles.metricTitle}>Theo dõi chu kỳ</Text>
               <Text style={styles.metricValue}>
                 {currentDay > 0
                   ? (isOvulation ? 'Cửa sổ rụng trứng' : 'Giai đoạn an toàn')
@@ -606,7 +606,7 @@ export default function HomeScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.notifTitle}>Bổ sung nước lọc định kỳ</Text>
                   <Text style={styles.notifDesc}>Đã uống {(waterMl / 1000).toFixed(1)}L / {(waterGoalMl / 1000).toFixed(1)}L mục tiêu.</Text>
-                  <Text style={styles.notifLink}>Mở Water Tracker →</Text>
+                  <Text style={styles.notifLink}>Mở theo dõi lượng nước →</Text>
                 </View>
               </TouchableOpacity>
 
@@ -624,7 +624,7 @@ export default function HomeScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.notifTitle}>Lịch trình giấc ngủ tối nay</Text>
                   <Text style={styles.notifDesc}>Đề xuất ngủ đủ {Math.floor(sleepGoalDisplay / 60)} giờ {sleepGoalDisplay % 60} phút mỗi đêm để giữ sức khỏe tốt.</Text>
-                  <Text style={styles.notifLink}>Mở Sleep Tracker →</Text>
+                  <Text style={styles.notifLink}>Mở theo dõi giấc ngủ →</Text>
                 </View>
               </TouchableOpacity>
 
@@ -660,7 +660,7 @@ export default function HomeScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.notifTitle}>Tùy chỉnh mục tiêu cá nhân</Text>
                   <Text style={styles.notifDesc}>Cập nhật lại chỉ tiêu bước chân, calo, giờ ngủ, nước uống.</Text>
-                  <Text style={[styles.notifLink, { color: '#16A34A' }]}>Thiết lập mục tiêu (Goals) →</Text>
+                  <Text style={[styles.notifLink, { color: '#16A34A' }]}>Thiết lập mục tiêu →</Text>
                 </View>
               </TouchableOpacity>
             </ScrollView>

@@ -350,7 +350,7 @@ export default function CycleScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cycle Tracker</Text>
+        <Text style={styles.headerTitle}>Theo dõi chu kỳ</Text>
         <TouchableOpacity onPress={() => { setShowHistoryModal(true); fetchHistory(); }}>
           <Ionicons name="calendar-outline" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
@@ -361,7 +361,7 @@ export default function CycleScreen() {
         <View style={styles.heroCard}>
           <View style={styles.cycleCircleWrap}>
             <View style={styles.cycleCircle}>
-              <Text style={styles.cycleDayNum}>Day {currentDay}</Text>
+              <Text style={styles.cycleDayNum}>Ngày {currentDay}</Text>
               <Text style={styles.cycleTotal}>/ {cycleLength} ngày</Text>
             </View>
           </View>

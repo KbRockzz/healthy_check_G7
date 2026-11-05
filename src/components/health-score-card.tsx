@@ -15,15 +15,15 @@ export default function HealthScoreCard({ score, label }: HealthScoreCardProps) 
   const getLabelInfo = (l: string) => {
     switch (l) {
       case 'excellent':
-        return { color: COLORS.success, text: 'Excellent' };
+        return { color: COLORS.success, text: 'Xuất sắc' };
       case 'good':
-        return { color: COLORS.primary, text: 'Good' };
+        return { color: COLORS.primary, text: 'Tốt' };
       case 'fair':
-        return { color: COLORS.warning, text: 'Fair' };
+        return { color: COLORS.warning, text: 'Khá' };
       case 'poor':
-        return { color: COLORS.danger, text: 'Poor' };
+        return { color: COLORS.danger, text: 'Cần cải thiện' };
       default:
-        return { color: COLORS.textTertiary, text: 'No data' };
+        return { color: COLORS.textTertiary, text: 'Chưa có dữ liệu' };
     }
   };
 
@@ -32,11 +32,11 @@ export default function HealthScoreCard({ score, label }: HealthScoreCardProps) 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>Health Score</Text>
+        <Text style={styles.title}>Điểm sức khỏe</Text>
         <Text style={styles.scoreLabel}>{score}/100</Text>
       </View>
 
-      <Text style={styles.scoreSub}>Based on your overview health tracking, your score is {score} and consider {info.text.toLowerCase()}..</Text>
+      <Text style={styles.scoreSub}>Dựa trên dữ liệu theo dõi sức khỏe tổng quan, điểm số của bạn là {score} - mức {info.text.toLowerCase()}.</Text>
 
       <View style={styles.scoreBadge}>
         <Text style={[styles.scoreText, { color: info.color }]}>{score}</Text>

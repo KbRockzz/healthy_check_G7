@@ -3,10 +3,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/theme';
 
 const TABS = [
-  { name: 'Overview', icon: 'bar-chart-outline', activeIcon: 'bar-chart', route: '/dashboard' },
-  { name: 'Health Data', icon: 'list-outline', activeIcon: 'list', route: '/health-data' },
-  { name: 'Explore', icon: 'compass-outline', activeIcon: 'compass', route: '/explore' },
-  { name: 'Sharing', icon: 'share-social-outline', activeIcon: 'share-social', route: '/share' },
+  { name: 'Tổng quan', icon: 'bar-chart-outline', activeIcon: 'bar-chart', route: '/dashboard' },
+  { name: 'Dữ liệu', icon: 'list-outline', activeIcon: 'list', route: '/health-data' },
+  { name: 'Khám phá', icon: 'compass-outline', activeIcon: 'compass', route: '/explore' },
+  { name: 'Chia sẻ', icon: 'share-social-outline', activeIcon: 'share-social', route: '/share' },
 ] as const;
 
 interface BottomTabBarProps {

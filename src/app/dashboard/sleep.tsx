@@ -163,7 +163,7 @@ export default function SleepScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={theme.textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>Sleep Tracker</Text>
+        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>Theo dõi giấc ngủ</Text>
         <TouchableOpacity
           style={[styles.themeToggle, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}
           onPress={() => setIsDarkMode(!isDarkMode)}
@@ -249,7 +249,7 @@ export default function SleepScreen() {
 
         {/* Sleep Stages Breakdown */}
         <View style={[styles.stagesCard, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Phân tích giai đoạn ngủ (Sleep Stages)</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Phân tích giai đoạn giấc ngủ</Text>
           <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
             Cấu trúc giấc ngủ giúp phục hồi thể chất và tinh thần
           </Text>
@@ -266,7 +266,7 @@ export default function SleepScreen() {
             <View style={styles.legendCol}>
               <View style={[styles.legendDot, { backgroundColor: '#4338CA' }]} />
               <View>
-                <Text style={[styles.legendName, { color: theme.textPrimary }]}>Ngủ sâu (Deep)</Text>
+                <Text style={[styles.legendName, { color: theme.textPrimary }]}>Ngủ sâu</Text>
                 <Text style={styles.legendTime}>2h 15m (30%)</Text>
               </View>
             </View>
@@ -274,7 +274,7 @@ export default function SleepScreen() {
             <View style={styles.legendCol}>
               <View style={[styles.legendDot, { backgroundColor: '#38BDF8' }]} />
               <View>
-                <Text style={[styles.legendName, { color: theme.textPrimary }]}>Ngủ nông (Light)</Text>
+                <Text style={[styles.legendName, { color: theme.textPrimary }]}>Ngủ nông</Text>
                 <Text style={styles.legendTime}>3h 45m (50%)</Text>
               </View>
             </View>
@@ -282,7 +282,7 @@ export default function SleepScreen() {
             <View style={styles.legendCol}>
               <View style={[styles.legendDot, { backgroundColor: '#A855F7' }]} />
               <View>
-                <Text style={[styles.legendName, { color: theme.textPrimary }]}>Mơ (REM)</Text>
+                <Text style={[styles.legendName, { color: theme.textPrimary }]}>Giai đoạn REM (Mơ)</Text>
                 <Text style={styles.legendTime}>1h 30m (20%)</Text>
               </View>
             </View>
@@ -298,7 +298,7 @@ export default function SleepScreen() {
             </Text>
           </View>
           <Text style={[styles.tipText, { color: isDarkMode ? '#A5B4FC' : '#4338CA' }]}>
-            • Giữ nhiệt độ phòng ngủ từ 19°C – 21°C để dễ chìm vào pha Deep Sleep.{'\n'}
+            • Giữ nhiệt độ phòng ngủ từ 19°C – 21°C để dễ chìm vào pha ngủ sâu.{'\n'}
             • Ngừng sử dụng thiết bị màn hình xanh 30 phút trước khi ngủ.{'\n'}
             • Tránh đồ uống chứa caffein sau 14:00 chiều.
           </Text>

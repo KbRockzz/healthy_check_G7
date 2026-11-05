@@ -65,7 +65,7 @@ export default function SignUpScreen() {
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Create Account ✨</Text>
+            <Text style={styles.title}>Tạo tài khoản ✨</Text>
             <Text style={styles.subtitle}>Bắt đầu hành trình chăm sóc sức khỏe ngay hôm nay</Text>
           </View>
 
@@ -85,7 +85,7 @@ export default function SignUpScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>Địa chỉ Email</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="mail-outline" size={20} color={COLORS.textTertiary} style={{ marginRight: 8 }} />
                 <TextInput

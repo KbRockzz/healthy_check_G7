@@ -70,14 +70,14 @@ export default function SignInScreen() {
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Sign In</Text>
+            <Text style={styles.title}>Đăng nhập</Text>
             <Text style={styles.subtitle}>Chào mừng bạn quay lại với Healthy Check</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
+              <Text style={styles.label}>Địa chỉ Email</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="mail-outline" size={20} color={COLORS.textTertiary} style={{ marginRight: 8 }} />
                 <TextInput
@@ -94,12 +94,12 @@ export default function SignInScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>Mật khẩu</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="lock-closed-outline" size={20} color={COLORS.textTertiary} style={{ marginRight: 8 }} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your password"
+                  placeholder="Nhập mật khẩu của bạn"
                   placeholderTextColor={COLORS.textTertiary}
                   value={password}
                   onChangeText={setPassword}
@@ -113,7 +113,7 @@ export default function SignInScreen() {
             </View>
 
             <TouchableOpacity style={styles.forgotPassword} onPress={() => setShowForgotModal(true)}>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -125,7 +125,7 @@ export default function SignInScreen() {
               {(busy || authLoading) ? (
                 <ActivityIndicator color={COLORS.textInverse} />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={styles.buttonText}>Đăng nhập</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -134,7 +134,7 @@ export default function SignInScreen() {
           <View style={styles.socialSection}>
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or sign in with</Text>
+              <Text style={styles.dividerText}>Hoặc đăng nhập bằng</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -167,9 +167,9 @@ export default function SignInScreen() {
 
           {/* Footer Link */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>{"Don't have an account? "}</Text>
+            <Text style={styles.footerText}>{"Chưa có tài khoản? "}</Text>
             <TouchableOpacity onPress={() => router.push('/auth/sign-up')}>
-              <Text style={styles.signUpLink}>Sign Up</Text>
+              <Text style={styles.signUpLink}>Đăng ký ngay</Text>
             </TouchableOpacity>
           </View>
         </View>

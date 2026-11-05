@@ -216,7 +216,7 @@ export default function NutritionScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Nutrition Tracker</Text>
+        <Text style={styles.headerTitle}>Theo dõi dinh dưỡng</Text>
         <TouchableOpacity onPress={handleSimulateBarcode} style={styles.scanBtn}>
           <Ionicons name="barcode-outline" size={24} color={COLORS.primary} />
         </TouchableOpacity>
@@ -249,7 +249,7 @@ export default function NutritionScreen() {
         {/* Calorie Hero Card */}
         <View style={styles.heroCard}>
           <View style={styles.heroLeft}>
-            <Text style={styles.heroTitle}>Calorie Budget</Text>
+            <Text style={styles.heroTitle}>Ngân sách Calo</Text>
             <Text style={styles.heroSubText}>{formatDateLabel(selectedDate)}</Text>
             <Text style={styles.heroCalNum}>{calories.toLocaleString()}</Text>
             <Text style={styles.heroTarget}>/ {goal.toLocaleString()} kcal</Text>
@@ -261,7 +261,7 @@ export default function NutritionScreen() {
           <View style={styles.ringContainer}>
             <View style={styles.outerRing}>
               <Text style={styles.ringPercent}>{Math.round((calories / goal) * 100)}%</Text>
-              <Text style={styles.ringLabel}>Consumed</Text>
+              <Text style={styles.ringLabel}>Đã nạp</Text>
             </View>
           </View>
         </View>
@@ -273,7 +273,7 @@ export default function NutritionScreen() {
           {/* Carbs */}
           <View style={styles.macroRow}>
             <View style={styles.macroInfo}>
-              <Text style={styles.macroLabel}>Carbohydrates</Text>
+              <Text style={styles.macroLabel}>Carbohydrates (Đường bột)</Text>
               <Text style={styles.macroVal}>{carbs}g / {carbsGoal}g ({Math.round((carbs / carbsGoal) * 100)}%)</Text>
             </View>
             <View style={styles.macroBarBg}>
@@ -284,7 +284,7 @@ export default function NutritionScreen() {
           {/* Protein */}
           <View style={styles.macroRow}>
             <View style={styles.macroInfo}>
-              <Text style={styles.macroLabel}>Protein (Đạm)</Text>
+              <Text style={styles.macroLabel}>Chất đạm (Protein)</Text>
               <Text style={styles.macroVal}>{protein}g / {proteinGoal}g ({Math.round((protein / proteinGoal) * 100)}%)</Text>
             </View>
             <View style={styles.macroBarBg}>
@@ -295,7 +295,7 @@ export default function NutritionScreen() {
           {/* Fat */}
           <View style={styles.macroRow}>
             <View style={styles.macroInfo}>
-              <Text style={styles.macroLabel}>Fat (Chất béo lành mạnh)</Text>
+              <Text style={styles.macroLabel}>Chất béo (Fat)</Text>
               <Text style={styles.macroVal}>{fat}g / {fatGoal}g ({Math.round((fat / fatGoal) * 100)}%)</Text>
             </View>
             <View style={styles.macroBarBg}>
@@ -329,7 +329,7 @@ export default function NutritionScreen() {
                   {meal.meal === 'lunch' && '☀️ Bữa trưa'}
                   {meal.meal === 'dinner' && '🌙 Bữa tối'}
                   {meal.meal === 'snack' && '🍎 Bữa phụ'}
-                  {' | Protein: ' + meal.protein_g + 'g | Carbs: ' + meal.carbs_g + 'g | Fat: ' + meal.fat_g + 'g'}
+                  {' | Đạm: ' + meal.protein_g + 'g | Đường bột: ' + meal.carbs_g + 'g | Chất béo: ' + meal.fat_g + 'g'}
                 </Text>
               </View>
             ))}
@@ -343,7 +343,7 @@ export default function NutritionScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={22} color="#FFFFFF" style={{ marginRight: 6 }} />
-          <Text style={styles.addFoodBtnText}>Ghi nhận món ăn mới (Add Food)</Text>
+          <Text style={styles.addFoodBtnText}>Ghi nhận món ăn mới</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -415,7 +415,7 @@ export default function NutritionScreen() {
               <View style={styles.macroInputs}>
                 <TextInput
                   style={[styles.textInput, styles.macroInput]}
-                  placeholder="Protein (g)"
+                  placeholder="Đạm (g)"
                   placeholderTextColor={COLORS.textTertiary}
                   value={proteinInput}
                   onChangeText={setProteinInput}
@@ -423,7 +423,7 @@ export default function NutritionScreen() {
                 />
                 <TextInput
                   style={[styles.textInput, styles.macroInput]}
-                  placeholder="Carbs (g)"
+                  placeholder="Đường bột (g)"
                   placeholderTextColor={COLORS.textTertiary}
                   value={carbsInput}
                   onChangeText={setCarbsInput}
@@ -431,7 +431,7 @@ export default function NutritionScreen() {
                 />
                 <TextInput
                   style={[styles.textInput, styles.macroInput]}
-                  placeholder="Fat (g)"
+                  placeholder="Chất béo (g)"
                   placeholderTextColor={COLORS.textTertiary}
                   value={fatInput}
                   onChangeText={setFatInput}

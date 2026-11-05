@@ -59,35 +59,35 @@ function LayoutContent() {
       >
         {/* Auth flow */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="launch" options={{ title: 'Launch' }} />
-        <Stack.Screen name="auth/sign-in" options={{ title: 'Sign In' }} />
-        <Stack.Screen name="auth/sign-up" options={{ title: 'Sign Up' }} />
+        <Stack.Screen name="launch" options={{ title: 'Bắt đầu' }} />
+        <Stack.Screen name="auth/sign-in" options={{ title: 'Đăng nhập' }} />
+        <Stack.Screen name="auth/sign-up" options={{ title: 'Đăng ký' }} />
 
         {/* Main app */}
-        <Stack.Screen name="onboarding" options={{ title: 'Onboarding' }} />
-        <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-        <Stack.Screen name="dashboard/steps" options={{ title: 'Steps' }} />
-        <Stack.Screen name="dashboard/sleep" options={{ title: 'Sleep' }} />
-        <Stack.Screen name="dashboard/nutrition" options={{ title: 'Nutrition' }} />
-        <Stack.Screen name="dashboard/cycle" options={{ title: 'Cycle' }} />
+        <Stack.Screen name="onboarding" options={{ title: 'Thiết lập hồ sơ' }} />
+        <Stack.Screen name="dashboard" options={{ title: 'Trang chủ' }} />
+        <Stack.Screen name="dashboard/steps" options={{ title: 'Đếm bước chân' }} />
+        <Stack.Screen name="dashboard/sleep" options={{ title: 'Giấc ngủ' }} />
+        <Stack.Screen name="dashboard/nutrition" options={{ title: 'Dinh dưỡng' }} />
+        <Stack.Screen name="dashboard/cycle" options={{ title: 'Chu kỳ' }} />
         <Stack.Screen name="dashboard/water" options={{ title: 'Uống nước' }} />
         <Stack.Screen name="dashboard/shared" options={{ title: 'Chia sẻ' }} />
-        <Stack.Screen name="health-data" options={{ title: 'Health Data' }} />
-        <Stack.Screen name="explore" options={{ title: 'Explore' }} />
+        <Stack.Screen name="health-data" options={{ title: 'Dữ liệu sức khỏe' }} />
+        <Stack.Screen name="explore" options={{ title: 'Khám phá' }} />
         <Stack.Screen
-  name="explore/[slug]"
-  options={{
-    title: 'Bài viết',
-    // Cho phép thoát bằng gesture (swipe từ trái sang phải) ngay cả khi
-    // nút back custom không nhận được touch (phòng trường hợp overlay che phủ).
-    gestureEnabled: true,
-    gestureDirection: 'horizontal',
-  }}
-/>
-        <Stack.Screen name="share" options={{ title: 'Sharing' }} />
-        <Stack.Screen name="profile" options={{ title: 'Profile' }} />
-        <Stack.Screen name="settings/goals" options={{ title: 'Goals' }} />
-        <Stack.Screen name="chat" options={{ title: 'Health Coach', headerShown: false }} />
+          name="explore/[slug]"
+          options={{
+            title: 'Bài viết',
+            // Cho phép thoát bằng gesture (swipe từ trái sang phải) ngay cả khi
+            // nút back custom không nhận được touch (phòng trường hợp overlay che phủ).
+            gestureEnabled: true,
+            gestureDirection: 'horizontal',
+          }}
+        />
+        <Stack.Screen name="share" options={{ title: 'Chia sẻ dữ liệu' }} />
+        <Stack.Screen name="profile" options={{ title: 'Hồ sơ cá nhân' }} />
+        <Stack.Screen name="settings/goals" options={{ title: 'Mục tiêu sức khỏe' }} />
+        <Stack.Screen name="chat" options={{ title: 'Trợ lý sức khỏe', headerShown: false }} />
       </Stack>
       {/* Floating Action Button — Health Coach (§6.3) */}
       <ChatFAB />

@@ -650,7 +650,9 @@ export default function ShareScreen() {
                   style={{paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: selectedScopes.includes(scope) ? COLORS.primary : COLORS.border, backgroundColor: selectedScopes.includes(scope) ? '#E0F2FE' : 'transparent'}}
                   onPress={() => toggleScope(scope)}
                 >
-                  <Text style={{color: selectedScopes.includes(scope) ? COLORS.primary : COLORS.textSecondary, fontWeight: '600'}}>{scope}</Text>
+                  <Text style={{color: selectedScopes.includes(scope) ? COLORS.primary : COLORS.textSecondary, fontWeight: '600'}}>
+                    {scope === 'steps' ? 'Bước chân' : scope === 'sleep' ? 'Giấc ngủ' : scope === 'nutrition' ? 'Dinh dưỡng' : scope}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -730,7 +732,7 @@ export default function ShareScreen() {
           <View style={styles.toggleRow}>
             <View style={styles.toggleLabelRow}>
               <Ionicons name="walk" size={20} color={COLORS.primary} />
-              <Text style={styles.toggleText}>Vận động & Bước chân (Activity)</Text>
+              <Text style={styles.toggleText}>Vận động & Bước chân</Text>
             </View>
             <Switch
               value={shareSteps}
@@ -744,7 +746,7 @@ export default function ShareScreen() {
           <View style={styles.toggleRow}>
             <View style={styles.toggleLabelRow}>
               <Ionicons name="moon" size={20} color="#8B5CF6" />
-              <Text style={styles.toggleText}>Lịch sử Giấc ngủ (Sleep Records)</Text>
+              <Text style={styles.toggleText}>Lịch sử Giấc ngủ</Text>
             </View>
             <Switch
               value={shareSleep}
@@ -758,7 +760,7 @@ export default function ShareScreen() {
           <View style={styles.toggleRow}>
             <View style={styles.toggleLabelRow}>
               <Ionicons name="restaurant" size={20} color="#D97706" />
-              <Text style={styles.toggleText}>Nhật ký Dinh dưỡng (Nutrition Logs)</Text>
+              <Text style={styles.toggleText}>Nhật ký Dinh dưỡng</Text>
             </View>
             <Switch
               value={shareNutrition}
@@ -772,7 +774,7 @@ export default function ShareScreen() {
           <View style={styles.toggleRow}>
             <View style={styles.toggleLabelRow}>
               <Ionicons name="rose" size={20} color="#DB2777" />
-              <Text style={styles.toggleText}>Chu kỳ & Sức khỏe nữ (Cycle Data)</Text>
+              <Text style={styles.toggleText}>Chu kỳ & Sức khỏe nữ</Text>
             </View>
             <Switch
               value={shareCycle}
