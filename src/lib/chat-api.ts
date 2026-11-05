@@ -11,9 +11,9 @@
 import { fetch as expoFetch } from 'expo/fetch';
 import { supabase, SUPABASE_URL, DashboardSummary } from './supabase';
 
-// Edge Function URL (§5.1). Hỗ trợ cả tên chuẩn `health-coach` và tên gõ nhầm `health-couch`
-const EDGE_URL_PRIMARY = `${SUPABASE_URL}/functions/v1/health-coach`;
-const EDGE_URL_FALLBACK = `${SUPABASE_URL}/functions/v1/health-couch`;
+// Edge Function URL (§5.1). Hỗ trợ cả tên deployed `health-couch` và `health-coach`
+const EDGE_URL_PRIMARY = `${SUPABASE_URL}/functions/v1/health-couch`;
+const EDGE_URL_FALLBACK = `${SUPABASE_URL}/functions/v1/health-coach`;
 
 // §5.3 — các SSE event name
 export type ChatEvent =
