@@ -7,6 +7,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, TextInput, Modal, ActivityIndicator,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -44,6 +45,10 @@ export default function SleepScreen() {
   // Log form state
   const [inputBedtime, setInputBedtime] = useState('23:00');
   const [inputWakeTime, setInputWakeTime] = useState('07:00');
+  const [showBedtimePicker, setShowBedtimePicker] = useState(false);
+  const [showWakePicker, setShowWakePicker] = useState(false);
+  const [tempBedtime, setTempBedtime] = useState(new Date());
+  const [tempWakeTime, setTempWakeTime] = useState(new Date());
 
   const fetchData = useCallback(async () => {
     if (!session) return;
@@ -111,6 +116,11 @@ export default function SleepScreen() {
     const remM = Math.round(totalM * 0.20);
     const quality = Math.min(100, Math.round((totalM / goalMins) * 100));
 
+    // timestamptz columns cần đầy đủ ngày+giờ (format ISO)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const bedtimeAt = new Date(`${todayStr}T${inputBedtime}:00Z`).toISOString();
+    const wakeAt = new Date(`${todayStr}T${inputWakeTime}:00Z`).toISOString();
+
     const today = new Date().toISOString().split('T')[0];
     const storageKey = `@healthy_check_sleep_${today}`;
 
@@ -132,8 +142,8 @@ export default function SleepScreen() {
               light_minutes: lightM,
               rem_minutes: remM,
               quality_score: quality,
-              bedtime_at: `${inputBedtime}:00`,
-              wake_at: `${inputWakeTime}:00`,
+              bedtime_at: bedtimeAt,
+              wake_at: wakeAt,
             })
             .eq('id', existing.id);
         }
@@ -147,8 +157,8 @@ export default function SleepScreen() {
           light_minutes: lightM,
           rem_minutes: remM,
           quality_score: quality,
-          bedtime_at: `${inputBedtime}:00`,
-          wake_at: `${inputWakeTime}:00`,
+          bedtime_at: bedtimeAt,
+          wake_at: wakeAt,
         });
       }
       await AsyncStorage.setItem(storageKey, totalM.toString());
@@ -165,6 +175,40 @@ export default function SleepScreen() {
     } catch (err) {
       Alert.alert('Lỗi', 'Không thể lưu giấc ngủ. Vui lòng thử lại.');
     }
+  };
+
+  const handleBedtimeChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowBedtimePicker(false);
+    if (event.type === 'set' && selectedDate) {
+      const h = String(selectedDate.getHours()).padStart(2, '0');
+      const m = String(selectedDate.getMinutes()).padStart(2, '0');
+      setInputBedtime(`${h}:${m}`);
+    }
+  }, []);
+
+  const handleWakeChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowWakePicker(false);
+    if (event.type === 'set' && selectedDate) {
+      const h = String(selectedDate.getHours()).padStart(2, '0');
+      const m = String(selectedDate.getMinutes()).padStart(2, '0');
+      setInputWakeTime(`${h}:${m}`);
+    }
+  }, []);
+
+  const openBedtimePicker = () => {
+    const [h, m] = inputBedtime.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    setTempBedtime(d);
+    setShowBedtimePicker(true);
+  };
+
+  const openWakePicker = () => {
+    const [h, m] = inputWakeTime.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    setTempWakeTime(d);
+    setShowWakePicker(true);
   };
 
   const formatDateLabel = (dateStr: string) => {
@@ -391,27 +435,39 @@ export default function SleepScreen() {
             </View>
 
             <View style={styles.modalForm}>
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Giờ đi ngủ (HH:MM)</Text>
-                <TextInput
-                  style={[styles.modalInput, { color: theme.textPrimary, borderColor: theme.cardBorder }]}
-                  value={inputBedtime}
-                  onChangeText={setInputBedtime}
-                  placeholder="23:00"
-                  placeholderTextColor={theme.textTertiary}
+              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Giờ đi ngủ</Text>
+              <TouchableOpacity style={[styles.timePickerRow, { borderColor: theme.cardBorder }]} onPress={openBedtimePicker}>
+                <Ionicons name="bed-outline" size={20} color="#818CF8" />
+                <Text style={[styles.timePickerText, { color: theme.textPrimary }]}>{inputBedtime}</Text>
+                <Ionicons name="chevron-down" size={18} color={theme.textTertiary} />
+              </TouchableOpacity>
+              {showBedtimePicker && (
+                <DateTimePicker
+                  value={tempBedtime}
+                  mode="time"
+                  is24Hour={true}
+                  display="spinner"
+                  onChange={handleBedtimeChange}
+                  textColor={theme.textPrimary}
                 />
-              </View>
+              )}
 
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Giờ thức dậy (HH:MM)</Text>
-                <TextInput
-                  style={[styles.modalInput, { color: theme.textPrimary, borderColor: theme.cardBorder }]}
-                  value={inputWakeTime}
-                  onChangeText={setInputWakeTime}
-                  placeholder="07:00"
-                  placeholderTextColor={theme.textTertiary}
+              <Text style={[styles.inputLabel, { color: theme.textSecondary, marginTop: 16 }]}>Giờ thức dậy</Text>
+              <TouchableOpacity style={[styles.timePickerRow, { borderColor: theme.cardBorder }]} onPress={openWakePicker}>
+                <Ionicons name="sunny-outline" size={20} color="#FBBF24" />
+                <Text style={[styles.timePickerText, { color: theme.textPrimary }]}>{inputWakeTime}</Text>
+                <Ionicons name="chevron-down" size={18} color={theme.textTertiary} />
+              </TouchableOpacity>
+              {showWakePicker && (
+                <DateTimePicker
+                  value={tempWakeTime}
+                  mode="time"
+                  is24Hour={true}
+                  display="spinner"
+                  onChange={handleWakeChange}
+                  textColor={theme.textPrimary}
                 />
-              </View>
+              )}
 
               <TouchableOpacity style={styles.saveBtn} onPress={handleLogSleep}>
                 <Text style={styles.saveBtnText}>Lưu & Cập nhật</Text>
@@ -559,6 +615,21 @@ const styles = StyleSheet.create({
   modalTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 18, fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string },
   modalForm: { gap: 16 },
+  timePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  timePickerText: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold as string,
+  },
   inputGroup: {},
   inputLabel: { fontSize: 12, fontWeight: '600', fontFamily: FONT_FAMILY.semiBold as string, marginBottom: 6 },
   modalInput: {
