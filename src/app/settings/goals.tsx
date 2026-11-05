@@ -32,10 +32,22 @@ const DEFAULT_GOALS: Goals = {
   wake_time: '07:00',
 };
 
+interface SuggestedGoals {
+  calorie_goal: number;
+  water_goal_ml: number;
+  bmi: string;
+  bmiLabel: string;
+  bmiColor: string;
+  bmr: number;
+  tdee: number;
+}
+
 export default function GoalSetupScreen() {
   const router = useRouter();
   const { session, profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggested, setSuggested] = useState<SuggestedGoals | null>(null);
   const [goals, setGoals] = useState<Goals>(profile ? {
     step_goal: profile.step_goal,
     calorie_goal: profile.calorie_goal,
@@ -44,6 +56,58 @@ export default function GoalSetupScreen() {
     bedtime: profile.bedtime,
     wake_time: profile.wake_time,
   } : DEFAULT_GOALS);
+
+  // Tính BMR & TDEE & gợi ý calo/nước dựa trên height/weight/gender/age
+  const calcSuggestions = useCallback(() => {
+    if (!profile?.height_cm || !profile?.weight_kg) return;
+    const h = profile.height_cm;
+    const w = profile.weight_kg;
+    const g = profile.gender;
+    // Tính tuổi từ date_of_birth (mặc định 25 nếu chưa có)
+    let age = 25;
+    if (profile.date_of_birth) {
+      const dob = new Date(profile.date_of_birth);
+      const now = new Date();
+      age = now.getFullYear() - dob.getFullYear() -
+        (now.getMonth() < dob.getMonth() || (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate()) ? 1 : 0);
+      if (age < 13) age = 18; // floor at 18 for adult formulas
+    }
+    // BMR Mifflin-St Jeor
+    const bmr = Math.round(
+      g === 'female'
+        ? 10 * w + 6.25 * h - 5 * age - 161
+        : 10 * w + 6.25 * h - 5 * age + 5
+    );
+    // TDEE estimate dựa trên bước chân mặc định 7500 bước/ngày
+    const activityMult = 1.375;
+    const tdee = Math.round(bmr * activityMult);
+    // Calo mục tiêu: tdee ± 200 tùy BMI
+    const bmiVal = w / ((h / 100) ** 2);
+    let calGoal = tdee;
+    let bmiLbl = 'Chuẩn';
+    let bmiClr = '#10B981';
+    if (bmiVal < 18.5) { calGoal = tdee + 300; bmiLbl = 'Thiếu cân'; bmiClr = '#3B82F6'; }
+    else if (bmiVal > 24.9) { calGoal = tdee - 300; bmiLbl = 'Thừa cân'; bmiClr = '#F59E0B'; }
+    else if (bmiVal > 29.9) { calGoal = tdee - 500; bmiLbl = 'Béo phì'; bmiClr = '#EF4444'; }
+    // Nước: ~35ml/kg
+    const waterGoal = Math.round(w * 35);
+    setSuggested({
+      calorie_goal: calGoal,
+      water_goal_ml: waterGoal,
+      bmi: bmiVal.toFixed(1),
+      bmiLabel: bmiLbl,
+      bmiColor: bmiClr,
+      bmr,
+      tdee,
+    });
+    setShowSuggestions(true);
+  }, [profile]);
+
+  const applySuggested = () => {
+    if (!suggested) return;
+    setGoals(prev => ({ ...prev, calorie_goal: suggested.calorie_goal, water_goal_ml: suggested.water_goal_ml }));
+    setShowSuggestions(false);
+  };
 
   // Time picker state
   const [showBedtimePicker, setShowBedtimePicker] = useState(false);
@@ -137,6 +201,19 @@ export default function GoalSetupScreen() {
         </Text>
       </View>
 
+      {/* Auto-calc button */}
+      {profile?.height_cm && profile?.weight_kg && (
+        <TouchableOpacity
+          style={styles.autoCalcBtn}
+          onPress={calcSuggestions}
+        >
+          <Ionicons name="fitness-outline" size={18} color="white" />
+          <Text style={styles.autoCalcBtnText}>
+            Tự động tính mục tiêu calo & nước (theo chiều cao/cân nặng/giới tính)
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {/* Steps Goal */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -160,7 +237,30 @@ export default function GoalSetupScreen() {
         <View style={styles.sectionHeader}>
           <Ionicons name="flame" size={24} color={COLORS.warning} />
           <Text style={styles.sectionTitle}>Mục tiêu calo</Text>
+          {suggested && (
+            <TouchableOpacity onPress={() => setShowSuggestions(!showSuggestions)}>
+              <Text style={{ fontSize: 11, color: COLORS.primary, fontFamily: FONT_FAMILY.medium as string }}>
+                {showSuggestions ? 'Ẩn' : '💡 Gợi ý'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
+        {suggested && showSuggestions && (
+          <View style={[styles.suggestionCard, { borderColor: suggested.bmiColor }]}>
+            <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 6, fontFamily: FONT_FAMILY.base as string }}>
+              Dựa trên chiều cao, cân nặng, giới tính (BMI {suggested.bmi} - {suggested.bmiLabel}):
+            </Text>
+            <Text style={{ fontSize: 12, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.base as string }}>
+              BMR: <Text style={{ fontWeight: 'bold' }}>{suggested.bmr}</Text> kcal/ngày &nbsp;·&nbsp;
+              TDEE: <Text style={{ fontWeight: 'bold' }}>{suggested.tdee}</Text> kcal/ngày
+            </Text>
+            <TouchableOpacity style={[styles.applyBtn, { backgroundColor: suggested.bmiColor }]} onPress={applySuggested}>
+              <Text style={{ color: 'white', fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string }}>
+                Đặt calo = {suggested.calorie_goal} kcal
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
@@ -178,7 +278,26 @@ export default function GoalSetupScreen() {
         <View style={styles.sectionHeader}>
           <Ionicons name="water" size={24} color="#3B82F6" />
           <Text style={styles.sectionTitle}>Mục tiêu nước</Text>
+          {suggested && (
+            <TouchableOpacity onPress={() => setShowSuggestions(!showSuggestions)}>
+              <Text style={{ fontSize: 11, color: COLORS.primary, fontFamily: FONT_FAMILY.medium as string }}>
+                {showSuggestions ? 'Ẩn' : '💡 Gợi ý'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
+        {suggested && showSuggestions && (
+          <View style={[styles.suggestionCard, { borderColor: suggested.bmiColor }]}>
+            <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 6, fontFamily: FONT_FAMILY.base as string }}>
+              Lượng nước khuyến nghị (~35ml/kg cân nặng):
+            </Text>
+            <TouchableOpacity style={[styles.applyBtn, { backgroundColor: '#3B82F6' }]} onPress={applySuggested}>
+              <Text style={{ color: 'white', fontWeight: 'bold', fontFamily: FONT_FAMILY.bold as string }}>
+                Đặt nước = {suggested.water_goal_ml} ml/ngày
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
@@ -344,9 +463,40 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
   },
   saveBtnDisabled: { opacity: 0.7 },
+  autoCalcBtn: {
+    backgroundColor: '#10B981',
+    borderRadius: BORDER_RADIUS.lg,
+    padding: 14,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  autoCalcBtnText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: FONT_FAMILY.medium as string,
+    textAlign: 'center',
+  },
   saveBtnText: {
     fontSize: FONT_SIZES.base,
     fontWeight: '600',
     color: COLORS.textInverse,
+  },
+  suggestionCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  applyBtn: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.full,
+    alignSelf: 'flex-start',
   },
 });

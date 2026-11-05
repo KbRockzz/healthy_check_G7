@@ -37,6 +37,7 @@ export default function HomeScreen() {
   const [calorieGoal, setCalorieGoal] = useState<number>(2200);
   const [waterMl, setWaterMl] = useState<number>(0);
   const [waterGoalMl, setWaterGoalMl] = useState<number>(2000);
+  const [sleepGoalDisplay, setSleepGoalDisplay] = useState<number>(480);
   const [healthScore, setHealthScore] = useState<number>(0);
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
 
@@ -156,7 +157,7 @@ export default function HomeScreen() {
       } else {
         // Fallback: calculate approximate score from today's data
         const stepsScore = Math.min((todaySteps / stepGoal) * 25, 25);
-        const sleepScore = Math.min((todaySleepMins / 480) * 25, 25);
+        const sleepScore = Math.min((todaySleepMins / sleepGoalDisplay) * 25, 25);
         const calScore = Math.min((todayCalories / calorieGoal) * 25, 25);
         const waterScore = Math.min((waterMl / waterGoalMl) * 25, 25);
         setHealthScore(Math.round(stepsScore + sleepScore + calScore + waterScore));
@@ -190,6 +191,7 @@ export default function HomeScreen() {
     if (profile?.step_goal) setStepGoal(profile.step_goal);
     if (profile?.calorie_goal) setCalorieGoal(profile.calorie_goal);
     if (profile?.water_goal_ml) setWaterGoalMl(profile.water_goal_ml);
+    if (profile?.sleep_goal_minutes) setSleepGoalDisplay(profile.sleep_goal_minutes);
 
     fetchData();
   }, [session, profile, authLoading, fetchData]);
@@ -415,11 +417,11 @@ export default function HomeScreen() {
               <View style={[styles.metricIconWrap, { backgroundColor: '#F3E8FF' }]}>
                 <Ionicons name="moon" size={22} color="#8B5CF6" />
               </View>
-              <Text style={[styles.metricProgressText, { color: '#8B5CF6' }]}>{480 > 0 ? Math.min(100, Math.round((todaySleepMins / 480) * 100)) : 0}%</Text>
+              <Text style={[styles.metricProgressText, { color: '#8B5CF6' }]}>{sleepGoalDisplay > 0 ? Math.min(100, Math.round((todaySleepMins / sleepGoalDisplay) * 100)) : 0}%</Text>
             </View>
             <Text style={styles.metricTitle}>Sleep</Text>
             <Text style={styles.metricValue}>{Math.floor(todaySleepMins / 60)}h {todaySleepMins % 60}m</Text>
-            <Text style={styles.metricSub}>Mục tiêu: 8h 00m</Text>
+            <Text style={styles.metricSub}>Mục tiêu: {Math.floor(sleepGoalDisplay / 60)}h {sleepGoalDisplay % 60}m</Text>
             <View style={[styles.metricFooterPill, { backgroundColor: '#F3E8FF' }]}>
               <Text style={[styles.metricFooterPillText, { color: '#6B21A8' }]}>Deep: 2h 15m (30%)</Text>
             </View>
@@ -621,7 +623,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.notifTitle}>Lịch trình giấc ngủ tối nay</Text>
-                  <Text style={styles.notifDesc}>Đề xuất đi ngủ lúc 23:00 để duy trì 8 giờ ngủ trọn vẹn.</Text>
+                  <Text style={styles.notifDesc}>Đề xuất ngủ đủ {Math.floor(sleepGoalDisplay / 60)} giờ {sleepGoalDisplay % 60} phút mỗi đêm để giữ sức khỏe tốt.</Text>
                   <Text style={styles.notifLink}>Mở Sleep Tracker →</Text>
                 </View>
               </TouchableOpacity>

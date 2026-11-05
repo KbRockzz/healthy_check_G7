@@ -56,6 +56,10 @@ export default function ShareScreen() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [savedPdfPath, setSavedPdfPath] = useState<string | null>(null);
 
+  // Dashboard data for PDF report (real values from DB)
+  const [dashData, setDashData] = useState<any>(null);
+  const [loadingDash, setLoadingDash] = useState(false);
+
   // Load existing grants
   const loadGrants = async () => {
     if (!session?.user?.id) return;
@@ -71,8 +75,30 @@ export default function ShareScreen() {
     }
   };
 
+  // Fetch dashboard summary for PDF report
+  const loadDashboardData = async () => {
+    if (!session?.user?.id) return;
+    setLoadingDash(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase.rpc('get_dashboard_summary', {
+        p_user: session.user.id,
+        p_day: today,
+      });
+      if (error) throw error;
+      setDashData(data);
+    } catch (err) {
+      console.error('loadDashboardData error:', err);
+    } finally {
+      setLoadingDash(false);
+    }
+  };
+
   useEffect(() => {
-    if (session) loadGrants();
+    if (session) {
+      loadGrants();
+      loadDashboardData();
+    }
   }, [session]);
 
   // Load incoming shares (shared with me)
@@ -84,7 +110,7 @@ export default function ShareScreen() {
       if (error) throw error;
       setSharedWithMe(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('loadIncomingShares error', err);
+      console.error('loadIncomingShares error:', err);
       setSharedWithMe([]);
     } finally {
       setLoadingIncoming(false);
@@ -177,26 +203,54 @@ export default function ShareScreen() {
     router.push({ pathname: '/dashboard/shared', params: { grantId } });
   };
 
-  // Tạo nội dung HTML chuẩn y khoa cho báo cáo lâm sàng
+  // Tạo nội dung HTML báo cáo tổng hợp chỉ số sức khỏe (dành cho project học tập)
   const buildHtmlReport = () => {
-    const patientName = profile?.full_name || session?.user?.user_metadata?.full_name || 'Alex Nguyen';
-    const patientEmail = session?.user?.email || 'patient@example.com';
-    const patientGender = profile?.gender === 'female' ? 'Nữ (Female)' : profile?.gender === 'male' ? 'Nam (Male)' : 'Chưa xác định';
-    const height = profile?.height_cm || 168;
-    const weight = profile?.weight_kg || 58;
-    const hM = height / 100;
-    const bmi = (weight / (hM * hM)).toFixed(1);
+    const patientName = profile?.full_name || session?.user?.user_metadata?.full_name || 'Người dùng';
+    const patientEmail = session?.user?.email || 'khong@co.email';
+    const patientGender = profile?.gender === 'female' ? 'Nữ' : profile?.gender === 'male' ? 'Nam' : 'Chưa xác định';
+    const height = profile?.height_cm || 0;
+    const weight = profile?.weight_kg || 0;
+    const hM = height > 0 ? height / 100 : 0;
+    const bmi = hM > 0 ? (weight / (hM * hM)).toFixed(1) : 'N/A';
     const now = new Date();
     const dateFormatted = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
     const timeFormatted = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const reportId = `HC-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Dữ liệu thực tế từ get_dashboard_summary (có fallback an toàn)
+    const d = dashData || {};
+    const stepsCount = d.steps?.count || 0;
+    const sleepMin = d.sleep?.total_minutes || 0;
+    const sleepH = Math.floor(sleepMin / 60);
+    const sleepM = sleepMin % 60;
+    const calories = Math.round(d.nutrition?.calories || 0);
+    const water = Math.round(d.water || 0);
+    const healthScore = d.health_score?.score || 0;
+    const stepGoal = d.goals?.step_goal || 10000;
+    const sleepGoalMin = d.goals?.sleep_goal_minutes || 480;
+    const calorieGoal = d.goals?.calorie_goal || 2000;
+    const waterGoal = d.goals?.water_goal_ml || 2000;
+
+    const stepPct = stepGoal > 0 ? Math.round((stepsCount / stepGoal) * 100) : 0;
+    const sleepPct = sleepGoalMin > 0 ? Math.round((sleepMin / sleepGoalMin) * 100) : 0;
+    const calPct = calorieGoal > 0 ? Math.round((calories / calorieGoal) * 100) : 0;
+    const waterPct = waterGoal > 0 ? Math.round((water / waterGoal) * 100) : 0;
+
+    const sleepGoalH = Math.floor(sleepGoalMin / 60);
+    const sleepGoalM = sleepGoalMin % 60;
+
+    const assessment = (pct: number, good = 80, ok = 50) => {
+      if (pct >= good) return 'Đạt';
+      if (pct >= ok) return 'Trung bình';
+      return 'Cần cải thiện';
+    };
 
     return `
 <!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>Báo Cáo Sức Khỏe Lâm Sàng - ${patientName}</title>
+  <title>Báo Cáo Tổng Hợp Sức Khỏe - ${patientName}</title>
   <style>
     @page { size: A4; margin: 18mm; }
     body {
@@ -299,6 +353,10 @@ export default function ShareScreen() {
       color: #16a34a;
       font-weight: 600;
     }
+    .status-warn {
+      color: #d97706;
+      font-weight: 600;
+    }
     .notes-box {
       background: #f0fdf4;
       border: 1px solid #bbf7d0;
@@ -332,12 +390,12 @@ export default function ShareScreen() {
   <div class="header">
     <div>
       <h1 class="logo-title">HEALTHY CHECK G7</h1>
-      <p class="sub-title">BÁO CÁO TỔNG QUAN CHỈ SỐ SỨC KHỎE LÂM SÀNG (PATIENT SUMMARY)</p>
+      <p class="sub-title">BÁO CÁO TỔNG QUAN CHỈ SỐ SỨC KHỎE (HEALTH SUMMARY)</p>
     </div>
     <div class="meta-box">
       <div><strong>Mã hồ sơ:</strong> ${reportId}</div>
       <div><strong>Thời gian xuất:</strong> ${timeFormatted} ngày ${dateFormatted}</div>
-      <div class="badge">ĐÃ XÁC THỰC DỮ LIỆU</div>
+      <div class="badge">DỮ LIỆU TỪ ỨNG DỤNG</div>
     </div>
   </div>
 
@@ -370,58 +428,59 @@ export default function ShareScreen() {
       </thead>
       <tbody>
         <tr>
-          <td><strong>Bước chân (Activity)</strong></td>
-          <td class="highlight">7,850 bước/ngày</td>
-          <td>10,000 bước/ngày</td>
-          <td class="status-ok">Đạt 78.5% (Tích cực)</td>
+          <td><strong>Bước chân</strong></td>
+          <td class="highlight">${stepsCount.toLocaleString()} bước/ngày</td>
+          <td>${stepGoal.toLocaleString()} bước/ngày</td>
+          <td class="${stepPct >= 80 ? 'status-ok' : stepPct >= 50 ? '' : 'status-warn'}">${stepPct}% (${assessment(stepPct)})</td>
         </tr>
         <tr>
           <td><strong>Thời lượng giấc ngủ</strong></td>
-          <td class="highlight">7 giờ 25 phút/đêm</td>
-          <td>8 giờ 00 phút/đêm</td>
-          <td class="status-ok">Ổn định (Deep/REM đạt chuẩn)</td>
+          <td class="highlight">${sleepH} giờ ${sleepM} phút/đêm</td>
+          <td>${sleepGoalH} giờ ${sleepGoalM} phút/đêm</td>
+          <td class="${sleepPct >= 80 ? 'status-ok' : sleepPct >= 50 ? '' : 'status-warn'}">${sleepPct}% (${assessment(sleepPct)})</td>
         </tr>
         <tr>
           <td><strong>Năng lượng nạp vào</strong></td>
-          <td class="highlight">1,920 kcal/ngày</td>
-          <td>2,000 kcal/ngày</td>
-          <td class="status-ok">Cân bằng năng lượng tốt</td>
+          <td class="highlight">${calories.toLocaleString()} kcal/ngày</td>
+          <td>${calorieGoal.toLocaleString()} kcal/ngày</td>
+          <td class="${calPct >= 80 ? 'status-ok' : calPct >= 50 ? '' : 'status-warn'}">${calPct}% (${assessment(calPct)})</td>
         </tr>
         <tr>
           <td><strong>Lượng nước bổ sung</strong></td>
-          <td class="highlight">2,100 ml/ngày</td>
-          <td>2,000 ml/ngày</td>
-          <td class="status-ok">Đạt chuẩn 105%</td>
+          <td class="highlight">${water.toLocaleString()} ml/ngày</td>
+          <td>${waterGoal.toLocaleString()} ml/ngày</td>
+          <td class="${waterPct >= 80 ? 'status-ok' : waterPct >= 50 ? '' : 'status-warn'}">${waterPct}% (${assessment(waterPct)})</td>
         </tr>
         <tr>
           <td><strong>Điểm sức khỏe tổng thể</strong></td>
-          <td class="highlight" style="font-size: 15px; color: #0284c7;">88 / 100 Điểm</td>
+          <td class="highlight" style="font-size: 15px; color: #0284c7;">${healthScore} / 100</td>
           <td>&ge; 80 Điểm</td>
-          <td class="status-ok">Hạng: Xuất sắc</td>
+          <td class="${healthScore >= 80 ? 'status-ok' : healthScore >= 50 ? '' : 'status-warn'}">${healthScore >= 80 ? 'Khá tốt' : healthScore >= 50 ? 'Trung bình' : 'Cần cải thiện'}</td>
         </tr>
       </tbody>
     </table>
   </div>
 
   <div class="section">
-    <div class="section-title">3. Đánh giá y khoa & Khuyến nghị của hệ thống</div>
+    <div class="section-title">3. Ghi chú tham khảo từ hệ thống</div>
     <div class="notes-box">
-      <p><strong>Kết luận:</strong> Dữ liệu ghi nhận từ hệ thống cảm biến và nhật ký sinh học cho thấy bệnh nhân duy trì lối sống lành mạnh. Không phát hiện dấu hiệu bất thường về tuần hoàn hay rối loạn pha ngủ trong 30 ngày gần nhất.</p>
-      <p><strong>Khuyến nghị bác sĩ:</strong> Tiếp tục duy trì chế độ vận động Zone 2 từ 150 phút/tuần, bổ sung đủ nước và điện giải khi làm việc cường độ cao.</p>
+      <p><strong>Lưu ý:</strong> Báo cáo này được tạo tự động từ ứng dụng Healthy Check G7. Các giá trị phản ánh dữ liệu theo dõi thực tế trong 30 ngày qua.</p>
+      <p><strong>Đề xuất:</strong> Dựa trên xu hướng vận động, giấc ngủ và dinh dưỡng, hệ thống khuyến nghị duy trì hoặc điều chỉnh chế độ sinh hoạt cho phù hợp với mục tiêu đã đặt.</p>
+      <p><strong>Lưu ý quan trọng:</strong> Đây là dự án học tập, không thay thế tư vấn y khoa chuyên nghiệp. Vui lòng tham khảo ý kiến bác sĩ hoặc chuyên gia sức khỏe trước khi đưa ra quyết định về sức khỏe.</p>
     </div>
   </div>
 
   <div class="footer">
     <div>
       <p>Báo cáo được trích xuất tự động từ ứng dụng <strong>Healthy Check G7</strong>.</p>
-      <p>Bản in này có giá trị cung cấp thông tin tham khảo cho Bác sĩ điều trị trong buổi thăm khám.</p>
+      <p>Bản in này chỉ mang tính chất tham khảo trong project học tập, không có giá trị chẩn đoán y khoa.</p>
     </div>
     <div class="stamp-box">
-      HỘI ĐỒNG Y KHOA G7<br>
-      <small style="font-size: 10px; font-weight: normal;">CHỨNG THỰC ĐIỆN TỬ</small>
+      HEALTHY CHECK G7<br>
+      <small style="font-size: 10px; font-weight: normal;">Dự án học tập - Thông tin tham khảo</small>
     </div>
   </div>
-</body>
+
 </html>
 `;
   };
