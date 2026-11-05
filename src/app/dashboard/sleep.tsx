@@ -298,7 +298,7 @@ export default function SleepScreen() {
             </Text>
           </View>
           <Text style={[styles.tipText, { color: isDarkMode ? '#A5B4FC' : '#4338CA' }]}>
-            • Giữ nhiệt độ phòng ngủ từ 19°C – 21°C để dễ chìm vào pha Deep Sleep.{'\n'}
+            • Giữ nhiệt độ phòng ngủ từ 19°C – 21°C để dễ chìm vào pha ngủ sâu.{'\n'}
             • Ngừng sử dụng thiết bị màn hình xanh 30 phút trước khi ngủ.{'\n'}
             • Tránh đồ uống chứa caffein sau 14:00 chiều.
           </Text>

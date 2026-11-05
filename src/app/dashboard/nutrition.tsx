@@ -329,7 +329,7 @@ export default function NutritionScreen() {
                   {meal.meal === 'lunch' && '☀️ Bữa trưa'}
                   {meal.meal === 'dinner' && '🌙 Bữa tối'}
                   {meal.meal === 'snack' && '🍎 Bữa phụ'}
-                  {' | Protein: ' + meal.protein_g + 'g | Carbs: ' + meal.carbs_g + 'g | Fat: ' + meal.fat_g + 'g'}
+                  {' | Đạm: ' + meal.protein_g + 'g | Đường bột: ' + meal.carbs_g + 'g | Chất béo: ' + meal.fat_g + 'g'}
                 </Text>
               </View>
             ))}
@@ -415,7 +415,7 @@ export default function NutritionScreen() {
               <View style={styles.macroInputs}>
                 <TextInput
                   style={[styles.textInput, styles.macroInput]}
-                  placeholder="Protein (g)"
+                  placeholder="Đạm (g)"
                   placeholderTextColor={COLORS.textTertiary}
                   value={proteinInput}
                   onChangeText={setProteinInput}
@@ -423,7 +423,7 @@ export default function NutritionScreen() {
                 />
                 <TextInput
                   style={[styles.textInput, styles.macroInput]}
-                  placeholder="Carbs (g)"
+                  placeholder="Đường bột (g)"
                   placeholderTextColor={COLORS.textTertiary}
                   value={carbsInput}
                   onChangeText={setCarbsInput}
@@ -431,7 +431,7 @@ export default function NutritionScreen() {
                 />
                 <TextInput
                   style={[styles.textInput, styles.macroInput]}
-                  placeholder="Fat (g)"
+                  placeholder="Chất béo (g)"
                   placeholderTextColor={COLORS.textTertiary}
                   value={fatInput}
                   onChangeText={setFatInput}

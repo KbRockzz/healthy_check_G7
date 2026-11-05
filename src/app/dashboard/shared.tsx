@@ -171,7 +171,7 @@ export default function SharedDashboardScreen() {
         <View style={styles.sharedBanner}>
           <Ionicons name="lock-closed" size={20} color="#8B5CF6" />
           <Text style={styles.sharedBannerText}>
-            Dữ liệu được cắt theo phạm vi chia sẻ ({scopes.join(', ')}).
+            Dữ liệu được cắt theo phạm vi chia sẻ ({scopes.map((s: string) => ({ steps: 'Bước chân', sleep: 'Giấc ngủ', nutrition: 'Dinh dưỡng', cycle: 'Chu kỳ' }[s] || s)).join(', ')}).
           </Text>
         </View>
 
@@ -180,7 +180,7 @@ export default function SharedDashboardScreen() {
           <View style={styles.scoreLeft}>
             <View style={styles.scoreBadgePill}>
               <Ionicons name="shield-checkmark" size={14} color={COLORS.success} />
-              <Text style={styles.scoreBadgeText}>Health Score</Text>
+              <Text style={styles.scoreBadgeText}>Điểm sức khỏe</Text>
             </View>
             <Text style={styles.scoreHeadline}>Điểm sức khỏe hôm nay</Text>
             <Text style={styles.scoreSubtext}>
