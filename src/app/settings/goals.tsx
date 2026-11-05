@@ -44,7 +44,7 @@ interface SuggestedGoals {
 
 export default function GoalSetupScreen() {
   const router = useRouter();
-  const { session, profile } = useAuth();
+  const { session, profile, refreshProfile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggested, setSuggested] = useState<SuggestedGoals | null>(null);
@@ -169,6 +169,10 @@ export default function GoalSetupScreen() {
         .eq('id', session.user.id);
 
       if (error) throw error;
+
+      // Refresh profile trong context trước khi navigate, để dashboard & health-data
+      // hiển thị đúng mục tiêu mới
+      await refreshProfile();
 
       Alert.alert(
         'Đã lưu thành công! ✅',
