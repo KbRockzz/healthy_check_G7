@@ -110,7 +110,15 @@ export default function HealthDataScreen() {
 
   // BMR Mifflin-St Jeor (male default or profile gender)
   const isMale = profile?.gender !== 'female';
-  const age = 25; // default
+  // Tính tuổi từ date_of_birth, mặc định 25 nếu chưa có
+  let age = 25;
+  if (profile?.date_of_birth) {
+    const dob = new Date(profile.date_of_birth);
+    const now = new Date();
+    age = now.getFullYear() - dob.getFullYear() -
+      (now.getMonth() < dob.getMonth() || (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate()) ? 1 : 0);
+    if (age < 13) age = 18;
+  }
   const bmr = isMale
     ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
     : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
@@ -119,14 +127,15 @@ export default function HealthDataScreen() {
   const activityMultiplier = stepsToday > 10000 ? 1.55 : stepsToday > 5000 ? 1.375 : 1.2;
   const tdee = Math.round(bmr * activityMultiplier);
 
-  // Water target: weight * 40ml
-  const waterGoal = Math.round(weight * 40);
+  // Water target: ưu tiên water_goal_ml từ profile, fallback weight * 40ml
+  const waterGoal = profile?.water_goal_ml || Math.round(weight * 40);
 
   // Activity level classification
   const activityLevel = stepsToday > 10000 ? 'Năng động' : stepsToday > 5000 ? 'Trung bình' : 'Ít vận động';
 
-  // Sleep score: 8 hours (480 mins) = 100%
-  const sleepScore = Math.min(100, Math.round((sleepMins / 480) * 100));
+  // Sleep score: theo sleep_goal_minutes của profile (mặc định 480)
+  const sleepGoalMins = profile?.sleep_goal_minutes || 480;
+  const sleepScore = Math.min(100, Math.round((sleepMins / sleepGoalMins) * 100));
 
   // Health Score (đã được fetch từ RPC get_dashboard_summary - đồng bộ với Dashboard)
   // Sử dụng healthScore state thay vì tính local
@@ -139,8 +148,8 @@ export default function HealthDataScreen() {
 
     // Nutrition & Metabolism
     { label: 'BMR (Năng lượng nghỉ)', value: bmr.toLocaleString(), unit: 'kcal', icon: 'flame', color: '#D97706', category: 'nutrition', targetRoute: '/dashboard/nutrition' },
-    { label: 'TDEE (Tổng năng lượng tiêu hao)', value: tdee.toLocaleString(), unit: 'kcal', icon: 'flash', color: '#EA580C', category: 'nutrition', targetRoute: '/dashboard/nutrition' },
-    { label: 'Cân bằng nước lý tưởng', value: `${waterToday} / ${waterGoal}`, unit: 'ml', icon: 'water', color: '#0284C7', category: 'nutrition', targetRoute: '/dashboard/water' },
+    { label: 'TDEE (Tổng năng lượng tiêu hao)', value: tdee.toLocaleString(), unit: `kcal (mục tiêu ${profile?.calorie_goal || 2000})`, icon: 'flash', color: '#EA580C', category: 'nutrition', targetRoute: '/dashboard/nutrition' },
+    { label: 'Cân bằng nước lý tưởng', value: `${waterToday} / ${waterGoal}`, unit: `ml (mục tiêu ${waterGoal})`, icon: 'water', color: '#0284C7', category: 'nutrition', targetRoute: '/dashboard/water' },
 
     // Activity & Sleep
     { label: 'Mức độ vận động', value: activityLevel, unit: `${stepsToday.toLocaleString()} bước`, icon: 'walk', color: COLORS.primary, category: 'activity', targetRoute: '/dashboard/steps' },
