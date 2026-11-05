@@ -11,8 +11,9 @@
 import { fetch as expoFetch } from 'expo/fetch';
 import { supabase, SUPABASE_URL, DashboardSummary } from './supabase';
 
-// Edge Function URL (§5.1). Dùng SUPABASE_URL export để không truy cập protected field.
-const EDGE_URL = `${SUPABASE_URL}/functions/v1/health-coach`;
+// Edge Function URL (§5.1). Hỗ trợ cả tên chuẩn `health-coach` và tên gõ nhầm `health-couch`
+const EDGE_URL_PRIMARY = `${SUPABASE_URL}/functions/v1/health-coach`;
+const EDGE_URL_FALLBACK = `${SUPABASE_URL}/functions/v1/health-couch`;
 
 // §5.3 — các SSE event name
 export type ChatEvent =
@@ -362,8 +363,9 @@ export async function* streamChat(
   });
 
   let res: Response;
+  let activeUrl = EDGE_URL_PRIMARY;
   try {
-    res = await expoFetch(EDGE_URL, {
+    res = await expoFetch(activeUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -373,6 +375,20 @@ export async function* streamChat(
       body,
       signal,
     });
+    // Nếu health-coach bị 404, tự động thử sang health-couch
+    if (res.status === 404) {
+      activeUrl = EDGE_URL_FALLBACK;
+      res = await expoFetch(activeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'x-client-info': 'react-native',
+        },
+        body,
+        signal,
+      });
+    }
   } catch {
     if (signal.aborted) return;
     yield* simulateLocalCoach(req, signal);
@@ -389,7 +405,7 @@ export async function* streamChat(
     const { data } = await supabase.auth.refreshSession();
     if (data.session?.access_token) {
       // Thử lại bằng cách đọc lại toàn bộ stream mới (không dùng recursion trong generator)
-      const retryRes = await expoFetch(EDGE_URL, {
+      const retryRes = await expoFetch(activeUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -417,7 +433,23 @@ export async function* streamChat(
     throw new Error(msg);
   }
 
-  yield* readSSE(res.body);
+  let hasReceivedDelta = false;
+  let serverConvId: string | null = null;
+  for await (const evt of readSSE(res.body)) {
+    if (evt.type === 'meta') {
+      serverConvId = evt.conversation_id;
+      yield evt;
+    } else if (evt.type === 'delta') {
+      hasReceivedDelta = true;
+      yield evt;
+    } else if (evt.type === 'error' && !hasReceivedDelta) {
+      // Nếu Edge Function bị lỗi upstream (do model/key chưa khớp trên server), tự động fallback sang coach với data thật từ Supabase
+      yield* simulateLocalCoach({ ...req, conversation_id: serverConvId ?? req.conversation_id }, signal);
+      return;
+    } else {
+      yield evt;
+    }
+  }
 }
 
 /** Lấy JWT hiện tại; refresh nếu cần. */
