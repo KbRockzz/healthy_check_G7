@@ -248,6 +248,14 @@ export default function HomeScreen() {
 
   if (!session) return null;
 
+  // Map điểm sức khỏe → trạng thái thể trạng (thay đổi theo số điểm)
+  const scoreStatus = (() => {
+    if (healthScore >= 80) return { label: 'Xuất sắc', color: '#34D399' };
+    if (healthScore >= 60) return { label: 'Tốt', color: '#38BDF8' };
+    if (healthScore >= 40) return { label: 'Trung bình', color: '#FBBF24' };
+    return { label: 'Cần cải thiện', color: '#F87171' };
+  })();
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -302,7 +310,7 @@ export default function HomeScreen() {
               <Ionicons name="shield-checkmark" size={14} color={COLORS.success} />
               <Text style={styles.scoreBadgeText}>Điểm sức khỏe hôm nay</Text>
             </View>
-            <Text style={styles.scoreHeadline}>Thể trạng xuất sắc</Text>
+            <Text style={styles.scoreHeadline}>Thể trạng {scoreStatus.label}</Text>
             <Text style={styles.scoreSubtext}>
               Dựa trên vận động, giấc ngủ và dinh dưỡng hôm nay. Nhấn để xem chi tiết chấm điểm.
             </Text>
@@ -519,7 +527,7 @@ export default function HomeScreen() {
 
             <View style={styles.modalHeroScore}>
               <Text style={styles.modalBigScore}>{healthScore}</Text>
-              <Text style={styles.modalScoreStatus}>Tình trạng Xuất sắc</Text>
+              <Text style={[styles.modalScoreStatus, { color: scoreStatus.color }]}>Tình trạng {scoreStatus.label}</Text>
               <Text style={styles.modalScoreTip}>Bạn cao hơn 82% người dùng cùng độ tuổi</Text>
             </View>
 
