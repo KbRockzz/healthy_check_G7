@@ -1,6 +1,6 @@
 # Supabase CLI config — Healthy Check (G7)
 # Secret (GEMINI_API_KEY, LLM_MODEL, CHAT_DAILY_LIMIT) KHÔNG đặt ở đây.
-# Đặt qua lệnh: supabase secrets set GEMINI_API_KEY=... LLM_MODEL=gemini-3.5-flash-lite CHAT_DAILY_LIMIT=30
+# Đặt qua lệnh: supabase secrets set GEMINI_API_KEY=... LLM_MODEL=gemini-2.5-flash CHAT_DAILY_LIMIT=30
 
 project_id = "pmaxtdfevzncqpbamwcq"
 

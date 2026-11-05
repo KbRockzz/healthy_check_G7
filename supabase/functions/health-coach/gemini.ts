@@ -343,7 +343,7 @@ export function createGeminiProvider(env: {
   get(key: string): string | undefined;
 }): GeminiProvider {
   const apiKey = env.get('GEMINI_API_KEY') ?? '';
-  const model = env.get('LLM_MODEL') ?? 'gemini-3.5-flash-lite';
-  const fallback = env.get('LLM_MODEL_FALLBACK') ?? 'gemini-3.1-flash-lite';
+  const model = env.get('LLM_MODEL') ?? 'gemini-2.5-flash';
+  const fallback = env.get('LLM_MODEL_FALLBACK') ?? 'gemini-2.0-flash';
   return new GeminiProvider({ apiKey, model, fallbackModel: fallback });
 }
