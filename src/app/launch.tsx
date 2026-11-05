@@ -21,7 +21,7 @@ export default function LaunchScreen() {
       {/* Ảnh banner người phụ nữ đang chạy bộ */}
       <View style={styles.imageContainer}>
         <Image
-          source={require('../../assets/images/runner.png')}
+          source={require('../../assets/images/runner.jpg')}
           style={styles.image}
           resizeMode="cover"
         />
