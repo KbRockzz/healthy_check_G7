@@ -163,7 +163,7 @@ export default function StepsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Step Tracker</Text>
+        <Text style={styles.headerTitle}>Đếm bước chân</Text>
         <TouchableOpacity onPress={() => setShowLogModal(true)} style={styles.addBtn}>
           <Ionicons name="add-circle-outline" size={26} color={COLORS.primary} />
         </TouchableOpacity>
@@ -196,7 +196,7 @@ export default function StepsScreen() {
           <View style={styles.heroLeft}>
             <Text style={styles.heroSub}>{selectedDate === new Date().toISOString().split('T')[0] ? 'Tổng số bước hôm nay' : formatDateLabel(selectedDate)}</Text>
             <Text style={styles.heroSteps}>{selectedEntry.steps.toLocaleString()}</Text>
-            <Text style={styles.heroGoal}>/ {goal.toLocaleString()} Steps</Text>
+            <Text style={styles.heroGoal}>/ {goal.toLocaleString()} bước</Text>
             <View style={styles.heroBadge}>
               <Ionicons name="flame" size={12} color="#FFFFFF" />
               <Text style={styles.heroBadgeText}>{Math.round((selectedEntry.steps / goal) * 100)}% Mục tiêu ngày</Text>
@@ -205,7 +205,7 @@ export default function StepsScreen() {
 
           <View style={styles.progressRing}>
             <Text style={styles.ringVal}>{Math.round((selectedEntry.steps / goal) * 100)}%</Text>
-            <Text style={styles.ringLabel}>Completed</Text>
+            <Text style={styles.ringLabel}>Hoàn thành</Text>
           </View>
         </View>
 
@@ -225,7 +225,7 @@ export default function StepsScreen() {
 
           <View style={styles.metricPill}>
             <Ionicons name="time-outline" size={20} color="#10B981" />
-            <Text style={styles.pillValue}>{Math.round(selectedEntry.steps / 120)} mins</Text>
+            <Text style={styles.pillValue}>{Math.round(selectedEntry.steps / 120)} phút</Text>
             <Text style={styles.pillLabel}>Vận động</Text>
           </View>
         </View>

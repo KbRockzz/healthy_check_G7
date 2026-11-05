@@ -91,16 +91,16 @@ export default function ProfileScreen() {
   if (hM > 0 && wKg > 0) {
     bmi = parseFloat((wKg / (hM * hM)).toFixed(1));
     if (bmi < 18.5) {
-      bmiLabel = 'Thiếu cân (Underweight)';
+      bmiLabel = 'Thiếu cân';
       bmiColor = '#3B82F6';
     } else if (bmi <= 24.9) {
-      bmiLabel = 'Chuẩn cân đối (Normal weight)';
+      bmiLabel = 'Chuẩn cân đối';
       bmiColor = '#10B981';
     } else if (bmi <= 29.9) {
-      bmiLabel = 'Thừa cân (Overweight)';
+      bmiLabel = 'Thừa cân';
       bmiColor = '#F59E0B';
     } else {
-      bmiLabel = 'Béo phì (Obese)';
+      bmiLabel = 'Béo phì';
       bmiColor = '#EF4444';
     }
   }
@@ -258,8 +258,8 @@ export default function ProfileScreen() {
             <Text style={styles.label}>Giới tính sinh học</Text>
             <View style={styles.genderRow}>
               {[
-                { id: 'female', label: 'Nữ (Female)', icon: 'woman' },
-                { id: 'male', label: 'Nam (Male)', icon: 'man' },
+                { id: 'female', label: 'Nữ', icon: 'woman' },
+                { id: 'male', label: 'Nam', icon: 'man' },
                 { id: 'other', label: 'Khác', icon: 'person' },
               ].map((g) => (
                 <TouchableOpacity
@@ -328,7 +328,7 @@ export default function ProfileScreen() {
           <View style={styles.goalRow}>
             <View style={styles.goalInfo}>
               <Ionicons name="walk" size={20} color={COLORS.primary} />
-              <Text style={styles.goalLabel}>Bước chân (Steps)</Text>
+              <Text style={styles.goalLabel}>Mục tiêu bước chân</Text>
             </View>
             <TextInput
               style={styles.goalInput}
@@ -392,7 +392,7 @@ export default function ProfileScreen() {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="flag" size={18} color={COLORS.primary} />
-              <Text style={styles.openGoalsBtnText}>Mở giao diện Thiết lập Mục tiêu (Goals)</Text>
+              <Text style={styles.openGoalsBtnText}>Mở giao diện Thiết lập Mục tiêu</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
           </TouchableOpacity>

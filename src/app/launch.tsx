@@ -40,9 +40,9 @@ export default function LaunchScreen() {
 
         {/* Tiêu đề chính */}
         <Text style={styles.title}>
-          Let's start your{'\n'}
-          health journey{'\n'}
-          today with us!
+          Bắt đầu hành trình{'\n'}
+          chăm sóc sức khỏe{'\n'}
+          cùng chúng tôi!
         </Text>
 
         {/* Nút Continue */}
@@ -51,7 +51,7 @@ export default function LaunchScreen() {
           onPress={handleContinue}
           activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>Continue</Text>
+          <Text style={styles.buttonText}>Tiếp tục</Text>
         </TouchableOpacity>
       </View>
     </View>

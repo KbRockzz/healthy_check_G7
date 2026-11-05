@@ -194,3 +194,4 @@ Sau khi đăng nhập bằng tài khoản `demo.owner@healthy-check.app`:
 ---
 
 *Tài liệu được cập nhật chính thức vào tháng 11 năm 2026 bởi Nhóm 7 - DHKTPM19B.*
+

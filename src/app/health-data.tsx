@@ -185,7 +185,7 @@ export default function HealthDataScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerTitle}>All Health Data</Text>
+            <Text style={styles.headerTitle}>Dữ liệu sức khỏe</Text>
             <Text style={styles.headerSub}>Toàn bộ số đo sinh học & thể trạng</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/profile')} style={styles.avatarBtn}>
