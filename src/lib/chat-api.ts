@@ -159,25 +159,42 @@ Dữ liệu sức khỏe thực tế hôm nay của người dùng (${fullName})
 Hãy trả lời dựa sát trên dữ liệu thật này của người dùng.`;
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\nCâu hỏi của người dùng: ${req.message}` }] },
-        ],
-      }),
-      signal,
-    });
+    const candidateModels = [
+      'gemini-3.5-flash-lite',
+      'gemini-3.8-flash',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash',
+    ];
 
-    if (!resp.ok) {
-      yield* simulateLocalCoach({ ...req, conversation_id: convId }, signal, { fullName, summary });
-      return;
+    let replyText = '';
+    for (const model of candidateModels) {
+      if (signal.aborted) return;
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              { role: 'user', parts: [{ text: `${systemPrompt}\n\nCâu hỏi của người dùng: ${req.message}` }] },
+            ],
+          }),
+          signal,
+        });
+
+        if (resp.ok) {
+          const json = await resp.json();
+          replyText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (replyText) {
+            break;
+          }
+        }
+      } catch (err) {
+        if (signal.aborted) return;
+        // Continue to fallback model
+      }
     }
 
-    const json = await resp.json();
-    const replyText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     if (!replyText) {
       yield* simulateLocalCoach({ ...req, conversation_id: convId }, signal, { fullName, summary });
       return;
