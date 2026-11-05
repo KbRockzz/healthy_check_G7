@@ -51,6 +51,9 @@ export default function NutritionScreen() {
   const [loaded, setLoaded] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<MealEntry | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Meal type selector
   const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
@@ -201,6 +204,66 @@ export default function NutritionScreen() {
 
   const remaining = Math.max(0, goal - calories);
 
+  // --- Edit / Delete helpers ---
+  const handleDeleteMeal = async (meal: MealEntry) => {
+    Alert.alert(
+      'Xóa món ăn?',
+      `Bạn có chắc muốn xóa "${meal.food_name}"?`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('nutrition_logs')
+                .delete()
+                .eq('id', meal.id)
+                .eq('user_id', session?.user.id);
+              if (error) throw error;
+              fetchData();
+            } catch (err: any) {
+              Alert.alert('Lỗi', err.message || 'Không thể xóa món ăn');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const openEditModal = (meal: MealEntry) => {
+    setEditingEntry(meal);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEntry || !session) return;
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('nutrition_logs')
+        .update({
+          food_name: editingEntry.food_name,
+          calories: editingEntry.calories,
+          protein_g: editingEntry.protein_g,
+          carbs_g: editingEntry.carbs_g,
+          fat_g: editingEntry.fat_g,
+          meal: editingEntry.meal,
+        })
+        .eq('id', editingEntry.id)
+        .eq('user_id', session.user.id);
+      if (error) throw error;
+      setShowEditModal(false);
+      setEditingEntry(null);
+      fetchData();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.message || 'Không thể cập nhật món ăn');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   if (!loaded) {
     return (
       <View style={styles.loader}>
@@ -322,8 +385,16 @@ export default function NutritionScreen() {
                     <Ionicons name="restaurant" size={20} color="#D97706" />
                     <Text style={styles.mealName}>{meal.food_name}</Text>
                   </View>
-                  <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
+                  <View style={styles.mealActionsRow}>
+                    <TouchableOpacity onPress={() => openEditModal(meal)} style={styles.mealEditBtn}>
+                      <Ionicons name="create-outline" size={16} color="#3B82F6" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteMeal(meal)} style={styles.mealDeleteBtn}>
+                      <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
+                <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
                 <Text style={styles.mealDetailText}>
                   {meal.meal === 'breakfast' && '🌅 Bữa sáng'}
                   {meal.meal === 'lunch' && '☀️ Bữa trưa'}
@@ -346,6 +417,94 @@ export default function NutritionScreen() {
           <Text style={styles.addFoodBtnText}>Ghi nhận món ăn mới</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Edit Food Modal */}
+      <Modal
+        visible={showEditModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <View style={styles.modalTopRow}>
+              <Text style={styles.modalTitle}>Chỉnh sửa món ăn</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <Ionicons name="close-circle" size={26} color={COLORS.textTertiary} />
+              </TouchableOpacity>
+            </View>
+
+            {editingEntry && (
+              <View style={styles.formGroup}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Tên món ăn"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={editingEntry.food_name}
+                  onChangeText={(v) => setEditingEntry({ ...editingEntry, food_name: v })}
+                />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Số Calo (kcal)"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={editingEntry.calories.toString()}
+                  onChangeText={(v) => setEditingEntry({ ...editingEntry, calories: parseInt(v) || 0 })}
+                  keyboardType="numeric"
+                />
+                <View style={styles.macroInputs}>
+                  <TextInput
+                    style={[styles.textInput, styles.macroInput]}
+                    placeholder="Đạm (g)"
+                    placeholderTextColor={COLORS.textTertiary}
+                    value={editingEntry.protein_g.toString()}
+                    onChangeText={(v) => setEditingEntry({ ...editingEntry, protein_g: parseInt(v) || 0 })}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.textInput, styles.macroInput]}
+                    placeholder="Đường bột (g)"
+                    placeholderTextColor={COLORS.textTertiary}
+                    value={editingEntry.carbs_g.toString()}
+                    onChangeText={(v) => setEditingEntry({ ...editingEntry, carbs_g: parseInt(v) || 0 })}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.textInput, styles.macroInput]}
+                    placeholder="Chất béo (g)"
+                    placeholderTextColor={COLORS.textTertiary}
+                    value={editingEntry.fat_g.toString()}
+                    onChangeText={(v) => setEditingEntry({ ...editingEntry, fat_g: parseInt(v) || 0 })}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <Text style={styles.presetHeading}>Chọn bữa ăn</Text>
+                <View style={styles.mealTypeRow}>
+                  {mealTypes.map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[styles.mealTypeBtn, editingEntry.meal === type && styles.mealTypeBtnActive]}
+                      onPress={() => setEditingEntry({ ...editingEntry, meal: type })}
+                    >
+                      <Text style={[styles.mealTypeText, editingEntry.meal === type && styles.mealTypeTextActive]}>
+                        {mealTypeLabels[type]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.submitBtn, isUpdating && { opacity: 0.6 }]}
+                  onPress={handleSaveEdit}
+                  disabled={isUpdating}
+                >
+                  <Text style={styles.submitBtnText}>{isUpdating ? 'Đang lưu...' : 'Lưu thay đổi'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Add Food Modal */}
       <Modal
@@ -619,6 +778,9 @@ const styles = StyleSheet.create({
   },
   mealHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   mealTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  mealActionsRow: { flexDirection: 'row', gap: 8 },
+  mealEditBtn: { padding: 6, backgroundColor: '#EFF6FF', borderRadius: 8 },
+  mealDeleteBtn: { padding: 6, backgroundColor: '#FEF2F2', borderRadius: 8 },
   mealName: {
     fontSize: 14,
     fontWeight: '600',
