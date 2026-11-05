@@ -159,7 +159,7 @@ Dữ liệu sức khỏe thực tế hôm nay của người dùng (${fullName})
 Hãy trả lời dựa sát trên dữ liệu thật này của người dùng.`;
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
