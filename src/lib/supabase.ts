@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ---------------------------------------------------------------------
 // Kiểu dữ liệu từ lược đồ Supabase
@@ -275,29 +277,57 @@ const supabaseAnonKey =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtYXh0ZGZldnpuY3FwYmFtd2NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5ODY5NDEsImV4cCI6MjEwODU2Mjk0MX0.LoBewo64m-Bf98GTSniPO4CNw93FxWiq3nj1xmm_JZQ';
 
-const memoryStorage: Record<string, string> = {};
-
-// Web-safe storage that falls back to memory when SecureStore is unavailable
+// Storage an toan da nen tang:
+// - Tren Web: dung AsyncStorage / window.localStorage (khong bi mat session khi F5/reload)
+// - Tren Native (iOS/Android): uu tien SecureStore, fallback sang AsyncStorage
 const secureStorage = {
   getItem: async (key: string) => {
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          return window.localStorage.getItem(key);
+        }
+      } catch { /* ignore */ }
+      return AsyncStorage.getItem(key);
+    }
     try {
       return await SecureStore.getItemAsync(key);
     } catch {
-      return memoryStorage[key] ?? null;
+      return AsyncStorage.getItem(key);
     }
   },
   setItem: async (key: string, value: string) => {
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(key, value);
+          return;
+        }
+      } catch { /* ignore */ }
+      await AsyncStorage.setItem(key, value);
+      return;
+    }
     try {
       await SecureStore.setItemAsync(key, value);
     } catch {
-      memoryStorage[key] = value;
+      await AsyncStorage.setItem(key, value);
     }
   },
   removeItem: async (key: string) => {
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.removeItem(key);
+          return;
+        }
+      } catch { /* ignore */ }
+      await AsyncStorage.removeItem(key);
+      return;
+    }
     try {
       await SecureStore.deleteItemAsync(key);
     } catch {
-      delete memoryStorage[key];
+      await AsyncStorage.removeItem(key);
     }
   },
 };
