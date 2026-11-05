@@ -315,7 +315,7 @@ export default function HomeScreen() {
         {/* AI Health Coach Insight Card */}
         <TouchableOpacity
           style={styles.aiCard}
-          onPress={() => setShowAiModal(true)}
+          onPress={() => router.push('/chat')}
           activeOpacity={0.85}
         >
           <View style={styles.aiHeader}>
@@ -329,7 +329,7 @@ export default function HomeScreen() {
             </View>
           </View>
           <Text style={styles.aiText}>
-            💡 Bạn đã đạt <Text style={{ fontWeight: 'bold' }}>{Math.round((todaySteps / stepGoal) * 100)}%</Text> mục tiêu bước chân và ngủ đủ {Math.floor(todaySleepMins / 60)}h {todaySleepMins % 60}m. Nhấn để xem 3 lời khuyên sức khỏe dành riêng cho bạn hôm nay!
+            💡 Bạn đã đạt <Text style={{ fontWeight: 'bold' }}>{Math.round((todaySteps / stepGoal) * 100)}%</Text> mục tiêu bước chân và ngủ đủ {Math.floor(todaySleepMins / 60)}h {todaySleepMins % 60}m. Nhấn để trò chuyện với Health Coach!
           </Text>
         </TouchableOpacity>
 
