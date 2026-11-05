@@ -39,6 +39,7 @@ export default function SleepScreen() {
   const [showLogModal, setShowLogModal] = useState(false);
   const [entries, setEntries] = useState<SleepEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [hasTodayRecord, setHasTodayRecord] = useState(false);
 
   // Log form state
   const [inputBedtime, setInputBedtime] = useState('23:00');
@@ -65,7 +66,12 @@ export default function SleepScreen() {
         if (latest.sleep_date === today) {
           setTodaySleepMins(latest.total_minutes);
           await AsyncStorage.setItem(storageKey, latest.total_minutes.toString());
+          setHasTodayRecord(true);
+        } else {
+          setHasTodayRecord(false);
         }
+      } else {
+        setHasTodayRecord(false);
       }
 
       // Luôn lấy từ profile để đảm bảo goal hiện tại
@@ -75,6 +81,7 @@ export default function SleepScreen() {
       setLoaded(true);
     } catch {
       setLoaded(true);
+      setHasTodayRecord(false);
       // keep state
     }
   }, [session, profile]);
@@ -102,33 +109,62 @@ export default function SleepScreen() {
     const deepM = Math.round(totalM * 0.30);
     const lightM = Math.round(totalM * 0.50);
     const remM = Math.round(totalM * 0.20);
+    const quality = Math.min(100, Math.round((totalM / goalMins) * 100));
 
     const today = new Date().toISOString().split('T')[0];
     const storageKey = `@healthy_check_sleep_${today}`;
 
-    setTodaySleepMins(totalM);
-    setBedtime(inputBedtime);
-    setWakeTime(inputWakeTime);
-
     try {
+      if (hasTodayRecord) {
+        // Upsert: cập nhật bản ghi hôm nay
+        const { data: existing } = await supabase
+          .from('sleep_records')
+          .select('id')
+          .eq('user_id', session?.user.id)
+          .eq('sleep_date', today)
+          .single();
+        if (existing) {
+          await supabase
+            .from('sleep_records')
+            .update({
+              total_minutes: totalM,
+              deep_minutes: deepM,
+              light_minutes: lightM,
+              rem_minutes: remM,
+              quality_score: quality,
+              bedtime_at: `${inputBedtime}:00`,
+              wake_at: `${inputWakeTime}:00`,
+            })
+            .eq('id', existing.id);
+        }
+      } else {
+        // Insert mới
+        await supabase.from('sleep_records').insert({
+          user_id: session?.user.id,
+          sleep_date: today,
+          total_minutes: totalM,
+          deep_minutes: deepM,
+          light_minutes: lightM,
+          rem_minutes: remM,
+          quality_score: quality,
+          bedtime_at: `${inputBedtime}:00`,
+          wake_at: `${inputWakeTime}:00`,
+        });
+      }
       await AsyncStorage.setItem(storageKey, totalM.toString());
-      await supabase.from('sleep_records').insert({
-        user_id: session?.user.id,
-        sleep_date: today,
-        total_minutes: totalM,
-        deep_minutes: deepM,
-        light_minutes: lightM,
-        rem_minutes: remM,
-        quality_score: Math.min(100, Math.round((totalM / goalMins) * 100)),
-      });
-      // Refresh data to reflect change
-      await fetchData();
-    } catch {
-      // local update persisted
+      setTodaySleepMins(totalM);
+      setBedtime(inputBedtime);
+      setWakeTime(inputWakeTime);
+      setHasTodayRecord(true);
+      setShowLogModal(false);
+      fetchData();
+      Alert.alert(
+        hasTodayRecord ? 'Đã cập nhật! 🌙' : 'Thành công! 🌙',
+        `Đã lưu giấc ngủ: ${Math.floor(totalM / 60)}h ${totalM % 60}m`
+      );
+    } catch (err) {
+      Alert.alert('Lỗi', 'Không thể lưu giấc ngủ. Vui lòng thử lại.');
     }
-
-    setShowLogModal(false);
-    Alert.alert('Thành công! 🌙', `Đã lưu giấc ngủ: ${Math.floor(totalM / 60)}h ${totalM % 60}m`);
   };
 
   const formatDateLabel = (dateStr: string) => {
@@ -181,20 +217,41 @@ export default function SleepScreen() {
         <View style={styles.dateSelector}>
           <Text style={styles.dateSelectorLabel}>Chọn ngày</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
-            {entries.map((entry) => (
-              <TouchableOpacity
-                key={entry.sleep_date}
-                style={[styles.dateChip, selectedDate === entry.sleep_date && styles.dateChipActive]}
-                onPress={() => setSelectedDate(entry.sleep_date)}
-              >
-                <Text style={[styles.dateChipText, selectedDate === entry.sleep_date && styles.dateChipTextActive]}>
-                  {formatDateLabel(entry.sleep_date)}
-                </Text>
-                <Text style={[styles.dateChipSteps, selectedDate === entry.sleep_date && styles.dateChipStepsActive]}>
-                  {Math.floor(entry.total_minutes / 60)}h {entry.total_minutes % 60}m
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {/* Luôn hiển thị hôm nay */}
+            {(() => {
+              const today = new Date().toISOString().split('T')[0];
+              const todayEntry = entries.find(e => e.sleep_date === today);
+              return (
+                <TouchableOpacity
+                  key={today}
+                  style={[styles.dateChip, selectedDate === today && styles.dateChipActive]}
+                  onPress={() => setSelectedDate(today)}
+                >
+                  <Text style={[styles.dateChipText, selectedDate === today && styles.dateChipTextActive]}>
+                    Hôm nay
+                  </Text>
+                  <Text style={[styles.dateChipSteps, selectedDate === today && styles.dateChipStepsActive]}>
+                    {todayEntry ? `${Math.floor(todayEntry.total_minutes / 60)}h ${todayEntry.total_minutes % 60}m` : '—'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
+            {entries
+              .filter(e => e.sleep_date !== selectedDate)
+              .map((entry) => (
+                <TouchableOpacity
+                  key={entry.sleep_date}
+                  style={[styles.dateChip, selectedDate === entry.sleep_date && styles.dateChipActive]}
+                  onPress={() => setSelectedDate(entry.sleep_date)}
+                >
+                  <Text style={[styles.dateChipText, selectedDate === entry.sleep_date && styles.dateChipTextActive]}>
+                    {formatDateLabel(entry.sleep_date)}
+                  </Text>
+                  <Text style={[styles.dateChipSteps, selectedDate === entry.sleep_date && styles.dateChipStepsActive]}>
+                    {Math.floor(entry.total_minutes / 60)}h {entry.total_minutes % 60}m
+                  </Text>
+                </TouchableOpacity>
+              ))}
           </ScrollView>
         </View>
 
@@ -208,7 +265,7 @@ export default function SleepScreen() {
               </Text>
             </View>
             <View style={styles.qualityCircle}>
-              <Text style={styles.qualityNum}>{goalMins > 0 ? Math.min(100, Math.round((displaySleepMins / goalMins) * 100)) : 0}%</Text>
+              <Text style={styles.qualityNum}>{displaySleepMins > 0 ? Math.min(100, Math.round((displaySleepMins / goalMins) * 100)) : 0}%</Text>
               <Text style={styles.qualityLabel}>Mục tiêu</Text>
             </View>
           </View>
@@ -310,8 +367,8 @@ export default function SleepScreen() {
           onPress={() => setShowLogModal(true)}
           activeOpacity={0.8}
         >
-          <Ionicons name="add-circle" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-          <Text style={styles.logButtonText}>Ghi nhận giấc ngủ đêm qua</Text>
+          <Ionicons name={hasTodayRecord ? 'refresh-circle' : 'add-circle'} size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.logButtonText}>{hasTodayRecord ? 'Ghi nhận lại giấc ngủ đêm qua' : 'Ghi nhận giấc ngủ đêm qua'}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -325,7 +382,9 @@ export default function SleepScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalBox, { backgroundColor: theme.cardBg }]}>
             <View style={styles.modalTopRow}>
-              <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Ghi nhận giấc ngủ</Text>
+              <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
+                {hasTodayRecord ? 'Cập nhật giấc ngủ' : 'Ghi nhận giấc ngủ'}
+              </Text>
               <TouchableOpacity onPress={() => setShowLogModal(false)}>
                 <Ionicons name="close" size={24} color={theme.textSecondary} />
               </TouchableOpacity>
